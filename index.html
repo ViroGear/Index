@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Career Copilot</title>
+<style>
+  :root {
+    --bg: #050608;
+    --bg-2: #0c0e12;
+    --card: #0f1217;
+    --card-2: #12161c;
+    --border: #1c222b;
+    --border-2: #262e39;
+    --text: #f2f5f8;
+    --muted: #8b96a5;
+    --faint: #5b6573;
+    --cyan: #22d3ee;
+    --cyan-dim: #0fb6d4;
+    --cyan-glow: rgba(34, 211, 238, 0.15);
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: radial-gradient(1200px 600px at 80% -10%, rgba(34,211,238,0.07), transparent 60%), var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  .eyebrow {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 11px;
+    color: var(--cyan);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Header ---------- */
+  header {
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,6,8,0.7);
+    backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .header-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--cyan), #0891b2);
+    display: grid; place-items: center;
+    font-weight: 800; color: #021014; font-size: 18px;
+    box-shadow: 0 0 18px var(--cyan-glow);
+  }
+  .brand h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand p { font-size: 11px; color: var(--faint); letter-spacing: 0.04em; }
+
+  .key-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--card); border: 1px solid var(--border-2);
+    color: var(--muted); padding: 8px 14px; border-radius: 99px;
+    font-size: 12.5px; cursor: pointer; transition: 0.15s;
+  }
+  .key-btn:hover { border-color: var(--cyan-dim); color: var(--text); }
+  .key-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+  .key-dot.ok { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  /* ---------- Tabs ---------- */
+  nav.tabs {
+    display: flex; gap: 4px; margin: 28px 0 32px;
+    background: var(--bg-2); border: 1px solid var(--border);
+    padding: 5px; border-radius: 12px; width: fit-content;
+  }
+  .tab {
+    border: none; background: transparent; color: var(--muted);
+    padding: 10px 20px; border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 600; transition: 0.15s;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .tab .num {
+    font-family: ui-monospace, monospace; font-size: 11px;
+    color: var(--faint);
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--cyan); color: #021014; }
+  .tab.active .num { color: rgba(2,16,20,0.6); }
+
+  /* ---------- Panels ---------- */
+  .panel { display: none; animation: fade 0.3s ease; padding-bottom: 80px; }
+  .panel.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .panel-head { margin-bottom: 26px; }
+  .panel-head h2 {
+    font-size: 30px; font-weight: 800; letter-spacing: -0.02em;
+    margin: 12px 0 6px;
+  }
+  .panel-head h2 .accent { color: var(--cyan); }
+  .panel-head p { color: var(--muted); font-size: 15px; max-width: 620px; }
+
+  /* ---------- Cards / grid ---------- */
+  .grid { display: grid; gap: 18px; }
+  .grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 820px) { .grid.cols-2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px;
+  }
+  .card.hl { border-color: var(--cyan-dim); box-shadow: 0 0 0 1px var(--cyan-glow), 0 0 30px rgba(34,211,238,0.06); }
+
+  /* ---------- Forms ---------- */
+  label.field { display: block; margin-bottom: 16px; }
+  label.field > span {
+    display: block; font-size: 12px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 7px;
+    font-family: ui-monospace, monospace;
+  }
+  input, textarea, select {
+    width: 100%; background: var(--bg-2); border: 1px solid var(--border-2);
+    color: var(--text); padding: 11px 13px; border-radius: 9px;
+    font-size: 14px; font-family: inherit; transition: 0.15s; resize: vertical;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px var(--cyan-glow);
+  }
+  textarea { min-height: 90px; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px; justify-content: center;
+    background: var(--cyan); color: #021014; border: none;
+    padding: 12px 22px; border-radius: 99px; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: 0.15s; font-family: inherit;
+  }
+  .btn:hover { background: #5ee0f5; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn.ghost { background: transparent; border: 1px solid var(--border-2); color: var(--text); }
+  .btn.ghost:hover { border-color: var(--cyan); background: rgba(34,211,238,0.05); }
+  .btn.sm { padding: 8px 16px; font-size: 13px; }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .spacer { flex: 1; }
+
+  /* ---------- Misc ---------- */
+  .pill {
+    display: inline-block; background: rgba(34,211,238,0.1);
+    border: 1px solid rgba(34,211,238,0.25); color: var(--cyan);
+    padding: 4px 11px; border-radius: 99px; font-size: 12px; margin: 3px 4px 3px 0;
+    font-family: ui-monospace, monospace;
+  }
+  .tag {
+    display: inline-block; background: var(--bg-2); border: 1px solid var(--border-2);
+    color: var(--muted); padding: 3px 9px; border-radius: 6px; font-size: 11.5px;
+    margin: 2px 4px 2px 0;
+  }
+
+  .empty {
+    text-align: center; padding: 50px 20px; color: var(--faint);
+    border: 1px dashed var(--border-2); border-radius: var(--radius);
+  }
+  .empty .big { font-size: 30px; margin-bottom: 8px; opacity: 0.6; }
+
+  /* milestones */
+  .milestone {
+    position: relative; padding-left: 38px; margin-bottom: 18px;
+  }
+  .milestone::before {
+    content: attr(data-n);
+    position: absolute; left: 0; top: 0;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--cyan); color: #021014;
+    display: grid; place-items: center; font-size: 12px; font-weight: 800;
+    font-family: ui-monospace, monospace;
+  }
+  .milestone::after {
+    content: ""; position: absolute; left: 12.5px; top: 30px; bottom: -18px;
+    width: 1px; background: var(--border-2);
+  }
+  .milestone:last-child::after { display: none; }
+  .milestone .m-time {
+    font-family: ui-monospace, monospace; font-size: 11px; color: var(--cyan);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .milestone .m-title { font-size: 16px; font-weight: 700; margin: 2px 0 6px; }
+  .milestone .m-body { color: var(--muted); font-size: 13.5px; }
+  .milestone .m-section { margin-top: 9px; }
+  .milestone .m-section .lbl {
+    font-size: 11px; color: var(--faint); text-transform: uppercase;
+    letter-spacing: 0.07em; font-family: ui-monospace, monospace;
+  }
+
+  /* ---------- XP bar ---------- */
+  .xp-bar { padding: 18px 20px; }
+  .xp-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .xp-nums { font-family: ui-monospace, monospace; font-weight: 700; font-size: 15px; color: var(--cyan); }
+  .xp-track { height: 9px; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 99px; overflow: hidden; }
+  .xp-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, #0891b2, var(--cyan));
+    box-shadow: 0 0 14px var(--cyan-glow); transition: width 0.5s cubic-bezier(.2,.8,.2,1);
+  }
+  .xp-next { margin-top: 10px; font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+
+  /* ---------- Level track ---------- */
+  .level-track { display: flex; flex-direction: column; gap: 14px; }
+  .level { display: flex; gap: 16px; position: relative; }
+  .level:not(:last-child)::after {
+    content: ""; position: absolute; left: 17px; top: 38px; bottom: -14px; width: 2px; background: var(--border-2);
+  }
+  .level.done:not(:last-child)::after { background: var(--cyan-dim); }
+  .level-badge {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 800; font-size: 14px;
+    font-family: ui-monospace, monospace; z-index: 1;
+    background: var(--bg-2); border: 2px solid var(--border-2); color: var(--faint);
+  }
+  .level.active .level-badge { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 14px var(--cyan-glow); }
+  .level.done .level-badge { background: var(--cyan); border-color: var(--cyan); color: #021014; }
+  .level-body {
+    flex: 1; background: var(--card-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px; transition: 0.2s;
+  }
+  .level.active .level-body { border-color: var(--cyan-dim); box-shadow: 0 0 0 1px var(--cyan-glow); }
+  .level.locked .level-body { opacity: 0.55; }
+  .level-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .level-meta { font-size: 10.5px; color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; }
+  .level-tier { font-size: 16.5px; font-weight: 700; margin-top: 2px; }
+  .level.done .level-tier { color: var(--cyan); }
+  .level-xp { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .level-focus { color: var(--muted); font-size: 13.5px; margin: 8px 0 10px; }
+  .level-skills { margin-bottom: 12px; }
+  .level-progress { height: 5px; background: var(--bg); border-radius: 99px; overflow: hidden; margin-bottom: 12px; }
+  .level-progress-fill { height: 100%; background: var(--cyan); border-radius: 99px; transition: width 0.4s ease; }
+
+  .task-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .task {
+    display: flex; align-items: center; gap: 11px; cursor: pointer;
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; transition: 0.13s; font-size: 13.5px;
+  }
+  .task:hover { border-color: var(--cyan-dim); }
+  .task .check {
+    width: 19px; height: 19px; flex-shrink: 0; border-radius: 5px;
+    border: 1.5px solid var(--border-2); display: grid; place-items: center;
+    font-size: 12px; color: #021014; transition: 0.13s;
+  }
+  .task.done .check { background: var(--cyan); border-color: var(--cyan); }
+  .task .task-label { flex: 1; color: var(--text); }
+  .task.done .task-label { color: var(--faint); text-decoration: line-through; }
+  .task .task-xp {
+    font-family: ui-monospace, monospace; font-size: 11.5px; font-weight: 700;
+    color: var(--cyan); flex-shrink: 0;
+  }
+  .task.done .task-xp { color: var(--green); }
+  .lock-note { margin-top: 10px; font-size: 11.5px; color: var(--faint); }
+
+  /* gap analysis */
+  .gap-col h4 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;
+    font-family: ui-monospace, monospace; margin-bottom: 12px; }
+  .gap-col.str h4 { color: var(--green); }
+  .gap-col.gap h4 { color: var(--amber); }
+  .gap-item { display: flex; gap: 10px; margin-bottom: 10px; font-size: 13.5px; color: var(--muted); }
+  .gap-item .ic { flex-shrink: 0; margin-top: 2px; }
+  .str .ic { color: var(--green); }
+  .gap .ic { color: var(--amber); }
+
+  .readiness {
+    display: flex; align-items: center; gap: 18px; margin-bottom: 4px;
+  }
+  .ring {
+    --p: 0; width: 78px; height: 78px; border-radius: 50%; flex-shrink: 0;
+    background: conic-gradient(var(--cyan) calc(var(--p)*1%), var(--border-2) 0);
+    display: grid; place-items: center; position: relative;
+  }
+  .ring::before { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--card); }
+  .ring span { position: relative; font-weight: 800; font-size: 19px; }
+
+  /* project cards */
+  .proj-card { position: relative; }
+  .proj-card .del {
+    position: absolute; top: 14px; right: 14px; background: none; border: none;
+    color: var(--faint); cursor: pointer; font-size: 16px; line-height: 1;
+  }
+  .proj-card .del:hover { color: var(--red); }
+  .proj-card h3 { font-size: 16px; margin-bottom: 6px; padding-right: 20px; }
+  .proj-card .desc { color: var(--muted); font-size: 13.5px; margin-bottom: 10px; }
+  .proj-card a { color: var(--cyan); font-size: 13px; text-decoration: none; }
+  .proj-card a:hover { text-decoration: underline; }
+
+  /* challenge */
+  .challenge-box { border-left: 3px solid var(--cyan); padding-left: 16px; margin: 6px 0 16px; }
+  .challenge-box .c-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+  .feedback-box { background: var(--bg-2); border-radius: 10px; padding: 16px; margin-top: 14px; border: 1px solid var(--border); }
+  .score-badge {
+    display: inline-grid; place-items: center; min-width: 52px; height: 52px;
+    border-radius: 12px; font-weight: 800; font-size: 20px; padding: 0 8px;
+  }
+
+  /* loading */
+  .loading { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 14px; padding: 8px 0; }
+  .spin {
+    width: 18px; height: 18px; border: 2px solid var(--border-2);
+    border-top-color: var(--cyan); border-radius: 50%; animation: rot 0.7s linear infinite;
+  }
+  @keyframes rot { to { transform: rotate(360deg); } }
+
+  .alert {
+    background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.3);
+    color: #fca5a5; padding: 12px 14px; border-radius: 9px; font-size: 13px; margin-top: 12px;
+  }
+
+  /* modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    display: none; place-items: center; z-index: 100; padding: 20px;
+  }
+  .modal-bg.show { display: grid; }
+  .modal {
+    background: var(--card); border: 1px solid var(--border-2); border-radius: 16px;
+    padding: 28px; max-width: 460px; width: 100%;
+  }
+  .modal h3 { font-size: 19px; margin-bottom: 8px; }
+  .modal p { color: var(--muted); font-size: 13.5px; margin-bottom: 18px; }
+  .modal a { color: var(--cyan); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--card-2); border: 1px solid var(--border-2); color: var(--text);
+    padding: 12px 20px; border-radius: 99px; font-size: 13.5px; opacity: 0;
+    transition: 0.25s; z-index: 200; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .section-divider { height: 1px; background: var(--border); margin: 30px 0; }
+  h3.sub { font-size: 18px; margin-bottom: 4px; }
+  .sub-desc { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap header-inner">
+    <div class="brand">
+      <div class="logo-mark">C</div>
+      <div>
+        <h1>Career Copilot</h1>
+        <p class="mono">IDEA → SKILLS → PROOF</p>
+      </div>
+    </div>
+    <button class="key-btn" onclick="openKeyModal()">
+      <span class="key-dot" id="keyDot"></span>
+      <span id="keyLabel">Connect Gemini</span>
+    </button>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="tabs">
+    <button class="tab active" data-tab="identity"><span class="num">01</span> User Identity</button>
+    <button class="tab" data-tab="roadmap"><span class="num">02</span> Roadmap</button>
+    <button class="tab" data-tab="portfolio"><span class="num">03</span> Portfolio</button>
+  </nav>
+
+  <!-- ============ TAB 1: IDENTITY ============ -->
+  <section class="panel active" id="panel-identity">
+    <div class="panel-head">
+      <span class="eyebrow">Who you are</span>
+      <h2>Your <span class="accent">identity</span> & ambition.</h2>
+      <p>Tell Career Copilot where you are and where you want to go. Everything else — your roadmap, gap analysis, and skill challenges — is generated from this.</p>
+    </div>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <label class="field"><span>Full name</span>
+          <input id="f-name" placeholder="Jordan Rivera" />
+        </label>
+        <label class="field"><span>Current role / status</span>
+          <input id="f-role" placeholder="CS student · self-taught dev · junior engineer" />
+        </label>
+        <div class="row" style="gap:12px;">
+          <label class="field" style="flex:1; min-width:140px;"><span>Experience level</span>
+            <select id="f-level">
+              <option>Complete beginner</option>
+              <option>Some experience</option>
+              <option selected>Intermediate</option>
+              <option>Advanced</option>
+            </select>
+          </label>
+          <label class="field" style="flex:1; min-width:140px;"><span>Target timeline</span>
+            <select id="f-timeline">
+              <option>3 months</option>
+              <option>6 months</option>
+              <option selected>12 months</option>
+              <option>18 months</option>
+              <option>24 months</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <label class="field"><span>🎯 Dream goal / milestone</span>
+          <input id="f-goal" placeholder="Land a software engineer role at Meta" />
+        </label>
+        <label class="field"><span>Current skills (comma separated)</span>
+          <textarea id="f-skills" placeholder="JavaScript, React, basic Python, Git"></textarea>
+        </label>
+        <label class="field"><span>Context / anything else</span>
+          <textarea id="f-context" placeholder="I have a non-CS degree, built 2 side projects, comfortable with frontend but weak on data structures & system design."></textarea>
+        </label>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:6px;">
+      <button class="btn" onclick="saveIdentity()">Save identity →</button>
+      <span class="spacer"></span>
+      <span id="identity-saved" class="mono" style="color:var(--green); font-size:13px; display:none;">✓ Saved</span>
+    </div>
+  </section>
+
+  <!-- ============ TAB 2: ROADMAP ============ -->
+  <section class="panel" id="panel-roadmap">
+    <div class="panel-head">
+      <span class="eyebrow">The path</span>
+      <h2>Your <span class="accent">roadmap</span> to the goal.</h2>
+      <p>Gemini analyzes the gap between where you are and your dream goal, then builds a milestone-by-milestone plan with skills to learn and projects to ship.</p>
+    </div>
+
+    <div id="roadmap-empty"></div>
+
+    <div class="row" style="margin-bottom:22px;">
+      <button class="btn" id="gen-roadmap-btn" onclick="generateRoadmap()">✦ Generate my roadmap</button>
+      <button class="btn ghost sm" id="regen-roadmap-btn" onclick="generateRoadmap()" style="display:none;">Regenerate</button>
+    </div>
+
+    <div id="roadmap-loading"></div>
+    <div id="roadmap-content"></div>
+  </section>
+
+  <!-- ============ TAB 3: PORTFOLIO ============ -->
+  <section class="panel" id="panel-portfolio">
+    <div class="panel-head">
+      <span class="eyebrow">The proof</span>
+      <h2>Your <span class="accent">portfolio</span> & real skills.</h2>
+      <p>Collect the projects that prove your skills, and practice with AI-generated, role-specific challenges that get you reps on what actually matters.</p>
+    </div>
+
+    <!-- Projects -->
+    <h3 class="sub">Projects & proof</h3>
+    <p class="sub-desc">Everything you've built that demonstrates you can do the job.</p>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="grid cols-2">
+        <label class="field"><span>Project title</span><input id="p-title" placeholder="RealtimeChat — WebSocket chat app" /></label>
+        <label class="field"><span>Link (optional)</span><input id="p-link" placeholder="https://github.com/you/project" /></label>
+      </div>
+      <label class="field"><span>What it shows</span><textarea id="p-desc" placeholder="Full-stack app handling 1k concurrent users. Demonstrates Node, WebSockets, Redis, and deployment."></textarea></label>
+      <label class="field"><span>Skills / tags (comma separated)</span><input id="p-tags" placeholder="Node.js, WebSockets, Redis, System Design" /></label>
+      <button class="btn sm" onclick="addProject()">+ Add project</button>
+    </div>
+
+    <div class="grid cols-2" id="projects-list" style="margin-bottom:14px;"></div>
+
+    <div class="section-divider"></div>
+
+    <!-- Challenges -->
+    <h3 class="sub">Skill challenges</h3>
+    <p class="sub-desc">Real-world tasks tailored to your goal. Attempt one, then get AI feedback scored like a hiring manager would.</p>
+
+    <div class="row" style="margin-bottom:18px;">
+      <button class="btn" id="gen-challenge-btn" onclick="generateChallenge()">✦ Generate a challenge</button>
+    </div>
+    <div id="challenge-loading"></div>
+    <div id="challenge-content"></div>
+  </section>
+</div>
+
+<!-- ===== API KEY MODAL ===== -->
+<div class="modal-bg" id="keyModal">
+  <div class="modal">
+    <h3>Connect Gemini</h3>
+    <p>Career Copilot uses Google's Gemini API. Paste your key below — it's stored only in this browser (localStorage). Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>.</p>
+    <label class="field"><span>Gemini API key</span>
+      <input id="apiKeyInput" type="password" placeholder="AIza..." />
+    </label>
+    <label class="field"><span>Model</span>
+      <select id="modelInput">
+        <option value="gemini-2.5-flash" selected>gemini-2.5-flash (fast)</option>
+        <option value="gemini-2.5-pro">gemini-2.5-pro (best quality)</option>
+        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+      </select>
+    </label>
+    <div class="row" style="margin-top:6px;">
+      <button class="btn" onclick="saveKey()">Save</button>
+      <button class="btn ghost" onclick="closeKeyModal()">Cancel</button>
+    </div>
+    <div id="keyError"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   STATE  (everything persists in localStorage)
+========================================================= */
+const store = {
+  get id()       { return JSON.parse(localStorage.getItem('cc_identity') || 'null'); },
+  set id(v)      { localStorage.setItem('cc_identity', JSON.stringify(v)); },
+  get projects() { return JSON.parse(localStorage.getItem('cc_projects') || '[]'); },
+  set projects(v){ localStorage.setItem('cc_projects', JSON.stringify(v)); },
+  get roadmap()  { return JSON.parse(localStorage.getItem('cc_roadmap') || 'null'); },
+  set roadmap(v) { localStorage.setItem('cc_roadmap', JSON.stringify(v)); },
+  get progress() { return JSON.parse(localStorage.getItem('cc_progress') || '[]'); },
+  set progress(v){ localStorage.setItem('cc_progress', JSON.stringify(v)); },
+  get dirty()    { return localStorage.getItem('cc_dirty') === '1'; },
+  set dirty(v)   { localStorage.setItem('cc_dirty', v ? '1' : '0'); },
+  get key()      { return localStorage.getItem('cc_key') || ''; },
+  set key(v)     { localStorage.setItem('cc_key', v); },
+  get model()    { return localStorage.getItem('cc_model') || 'gemini-2.5-flash'; },
+  set model(v)   { localStorage.setItem('cc_model', v); },
+};
+
+/* =========================================================
+   GEMINI SERVICE LAYER
+   Single entry point — swap/extend here.
+
+   Two modes, auto-detected:
+   - PROXY  : served over http(s) by server.js → key stays server-side.
+   - DIRECT : opened as a file:// → uses the localStorage key in-browser.
+========================================================= */
+const PROXY_MODE = location.protocol === 'http:' || location.protocol === 'https:';
+let proxyKeyConfigured = false;
+
+function parseModelText(text, schema) {
+  if (!text) throw new Error('Empty response from Gemini.');
+  if (schema) {
+    try { return JSON.parse(text); }
+    catch { return JSON.parse(text.replace(/```json|```/g, '').trim()); }
+  }
+  return text;
+}
+
+async function callGemini(prompt, schema) {
+  if (PROXY_MODE) {
+    const res = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, schema, model: store.model })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
+    return parseModelText(data.text, schema);
+  }
+
+  // DIRECT (file://) mode — key from the browser.
+  const key = store.key;
+  if (!key) { openKeyModal(); throw new Error('No API key set. Connect Gemini first.'); }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${store.model}:generateContent?key=${encodeURIComponent(key)}`;
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.7 }
+  };
+  if (schema) {
+    body.generationConfig.responseMimeType = "application/json";
+    body.generationConfig.responseSchema = schema;
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    let msg = `Gemini API error (${res.status})`;
+    try { const e = await res.json(); msg = e.error?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return parseModelText(text, schema);
+}
+
+function identitySummary() {
+  const id = store.id;
+  if (!id) return null;
+  const projTxt = store.projects.length
+    ? store.projects.map(p => `- ${p.title}: ${p.desc} [${p.tags.join(', ')}]`).join('\n')
+    : 'No portfolio projects yet.';
+  return `Name: ${id.name || 'N/A'}
+Current role/status: ${id.role || 'N/A'}
+Experience level: ${id.level}
+Target timeline: ${id.timeline}
+DREAM GOAL: ${id.goal}
+Current skills: ${id.skills || 'N/A'}
+Context: ${id.context || 'N/A'}
+
+Current portfolio:
+${projTxt}`;
+}
+
+/* =========================================================
+   TAB SWITCHING
+========================================================= */
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'roadmap' && store.dirty && canAutoGenerate()) {
+      generateRoadmap();
+    }
+  });
+});
+
+/* =========================================================
+   TAB 1 — IDENTITY
+========================================================= */
+function loadIdentity() {
+  const id = store.id; if (!id) return;
+  f('name', id.name); f('role', id.role); f('goal', id.goal);
+  f('skills', id.skills); f('context', id.context);
+  if (id.level) document.getElementById('f-level').value = id.level;
+  if (id.timeline) document.getElementById('f-timeline').value = id.timeline;
+}
+function f(k, v) { if (v != null) document.getElementById('f-' + k).value = v; }
+
+function canAutoGenerate() {
+  if (PROXY_MODE) return proxyKeyConfigured;
+  return !!store.key;
+}
+
+
+function saveIdentity() {
+  const id = {
+    name: val('f-name'), role: val('f-role'), goal: val('f-goal'),
+    skills: val('f-skills'), context: val('f-context'),
+    level: val('f-level'), timeline: val('f-timeline')
+  };
+  if (!id.goal.trim()) { toast('Add a dream goal first 🎯'); return; }
+  store.id = id;
+  store.dirty = true;
+  const el = document.getElementById('identity-saved');
+  el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2500);
+  toast('Identity saved');
+}
+const val = id => document.getElementById(id).value;
+
+/* =========================================================
+   TAB 2 — ROADMAP  (roadmap + gap analysis)
+========================================================= */
+const roadmapSchema = {
+  type: "object",
+  properties: {
+    summary: { type: "string" },
+    readiness: { type: "integer" },
+    strengths: { type: "array", items: { type: "string" } },
+    gaps: { type: "array", items: { type: "string" } },
+    levels: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          tier: { type: "string" },
+          timeframe: { type: "string" },
+          focus: { type: "string" },
+          skills: { type: "array", items: { type: "string" } },
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                label: { type: "string" },
+                xp: { type: "integer" }
+              },
+              required: ["label", "xp"]
+            }
+          }
+        },
+        required: ["tier", "timeframe", "focus", "skills", "tasks"]
+      }
+    }
+  },
+  required: ["summary", "readiness", "strengths", "gaps", "levels"]
+};
+
+async function generateRoadmap() {
+  if (!store.id) { toast('Fill in your identity first'); switchTo('identity'); return; }
+  setBusy('gen-roadmap-btn', true);
+  document.getElementById('roadmap-loading').innerHTML = loadingHTML('Analyzing your gap and building milestones…');
+  document.getElementById('roadmap-content').innerHTML = '';
+
+  const prompt = `You are an elite career coach and hiring manager. Based on this person's profile, design a GAMIFIED, level-based career roadmap toward their dream goal. Think of it like an RPG skill tree: each level is a tier that builds real-world skills and brings them closer to the goal, with the final level being the goal itself.
+
+${identitySummary()}
+
+Requirements:
+- "summary": 1-2 sentence honest assessment of their path.
+- "readiness": integer 0-100, how ready they are for the goal TODAY.
+- "strengths": 3-5 concrete current strengths relative to the goal.
+- "gaps": 3-6 specific skills/experiences they are MISSING for the goal (gap analysis).
+- "levels": 5-7 sequential levels spanning their target timeline, ordered easiest→hardest. Each level has:
+    - "tier": an evocative tier name reflecting a real-world capability (e.g. "Distributed Systems Adept", "Frontend Craftsman"). The FINAL level's tier should represent achieving the dream goal.
+    - "timeframe": e.g. "Months 1-2".
+    - "focus": 1-2 sentences on what this level builds and why it matters for the goal.
+    - "skills": 2-4 real skills gained at this level.
+    - "tasks": 3-5 concrete, real-world, verifiable tasks that build the skill (build X, ship Y, solve Z, contribute to W). Each task has an "xp" value between 100 and 500 reflecting effort. Bigger/harder levels should total more XP.
+Be specific to their goal and current level. Tasks must be doable and outcome-oriented, not vague advice.`;
+
+  try {
+    const data = await callGemini(prompt, roadmapSchema);
+    store.roadmap = data;
+    store.progress = [];
+    store.dirty = false;
+    renderRoadmap(data);
+    toast('Roadmap generated ✦');
+  } catch (e) {
+    document.getElementById('roadmap-content').innerHTML = `<div class="alert">${esc(e.message)}</div>`;
+  } finally {
+    document.getElementById('roadmap-loading').innerHTML = '';
+    setBusy('gen-roadmap-btn', false);
+  }
+}
+
+/* ----- XP / level computation ----- */
+function taskKey(li, ti) { return li + '-' + ti; }
+function isTaskDone(li, ti) { return store.progress.includes(taskKey(li, ti)); }
+
+function levelStats(level, li) {
+  let earned = 0, total = 0, doneCount = 0;
+  level.tasks.forEach((t, ti) => {
+    total += t.xp;
+    if (isTaskDone(li, ti)) { earned += t.xp; doneCount++; }
+  });
+  return { earned, total, doneCount, count: level.tasks.length, complete: doneCount === level.tasks.length && level.tasks.length > 0 };
+}
+
+// Active level = first not-yet-complete level. Returns -1 if all complete.
+function activeLevelIndex(levels) {
+  for (let i = 0; i < levels.length; i++) {
+    if (!levelStats(levels[i], i).complete) return i;
+  }
+  return -1;
+}
+
+function toggleTask(li, ti) {
+  const key = taskKey(li, ti);
+  const p = store.progress;
+  const idx = p.indexOf(key);
+  const wasActive = activeLevelIndex(store.roadmap.levels);
+  if (idx >= 0) p.splice(idx, 1); else p.push(key);
+  store.progress = p;
+  // detect level-up for a little celebration
+  const nowActive = activeLevelIndex(store.roadmap.levels);
+  renderRoadmap(store.roadmap);
+  if (idx < 0 && nowActive !== wasActive) {
+    const lv = wasActive >= 0 ? store.roadmap.levels[wasActive] : null;
+    toast(lv ? `⚡ Level up — ${lv.tier}!` : '🏆 Goal reached!');
+  }
+}
+
+function renderRoadmap(d) {
+  if (!d || !d.levels) { return; } // ignore legacy/empty data
+  document.getElementById('regen-roadmap-btn').style.display = 'inline-flex';
+  document.getElementById('gen-roadmap-btn').textContent = '✦ Generate my roadmap';
+
+  const levels = d.levels;
+  const active = activeLevelIndex(levels);
+  const totalEarned = levels.reduce((s, l, i) => s + levelStats(l, i).earned, 0);
+  const grandTotal  = levels.reduce((s, l) => s + l.tasks.reduce((a, t) => a + t.xp, 0), 0);
+  const completedLevels = levels.filter((l, i) => levelStats(l, i).complete).length;
+
+  /* ----- top XP bar (matches the spec) ----- */
+  let barHTML;
+  if (active === -1) {
+    barHTML = `
+      <div class="xp-bar card hl">
+        <div class="xp-top"><span class="eyebrow">Goal achieved</span><span class="xp-nums">${totalEarned.toLocaleString()} XP · MAX</span></div>
+        <div class="xp-track"><div class="xp-fill" style="width:100%"></div></div>
+        <div class="xp-next">🏆 All ${levels.length} levels complete — ${esc(levels[levels.length-1].tier)}</div>
+      </div>`;
+  } else {
+    const st = levelStats(levels[active], active);
+    const pct = st.total ? Math.round(st.earned / st.total * 100) : 0;
+    const lvlNum = active + 1;
+    barHTML = `
+      <div class="xp-bar card">
+        <div class="xp-top">
+          <span class="eyebrow">XP Progress</span>
+          <span class="xp-nums">${st.earned.toLocaleString()} / ${st.total.toLocaleString()}</span>
+        </div>
+        <div class="xp-track"><div class="xp-fill" style="width:${pct}%"></div></div>
+        <div class="xp-next">Next: Level ${lvlNum} · ${esc(levels[active].tier)}</div>
+      </div>`;
+  }
+
+  /* ----- level track ----- */
+  const levelHTML = levels.map((lv, li) => {
+    const st = levelStats(lv, li);
+    const state = st.complete ? 'done' : (li === active ? 'active' : (li < active ? 'done' : 'locked'));
+    const isLocked = state === 'locked';
+    const pct = st.total ? Math.round(st.earned / st.total * 100) : 0;
+
+    const tasks = lv.tasks.map((t, ti) => {
+      const done = isTaskDone(li, ti);
+      return `
+        <li class="task ${done ? 'done' : ''}" onclick="toggleTask(${li},${ti})">
+          <span class="check">${done ? '✓' : ''}</span>
+          <span class="task-label">${esc(t.label)}</span>
+          <span class="task-xp">+${t.xp}</span>
+        </li>`;
+    }).join('');
+
+    return `
+      <div class="level ${state}">
+        <div class="level-badge">${st.complete ? '✓' : (li + 1)}</div>
+        <div class="level-body">
+          <div class="level-head">
+            <div>
+              <div class="level-meta mono">LEVEL ${li + 1} · ${esc(lv.timeframe)}</div>
+              <div class="level-tier">${esc(lv.tier)}</div>
+            </div>
+            <div class="level-xp mono">${st.earned}/${st.total} XP</div>
+          </div>
+          <div class="level-focus">${esc(lv.focus)}</div>
+          <div class="level-skills">${lv.skills.map(s => `<span class="tag">${esc(s)}</span>`).join('')}</div>
+          <div class="level-progress"><div class="level-progress-fill" style="width:${pct}%"></div></div>
+          <ul class="task-list">${tasks}</ul>
+          ${isLocked ? '<div class="lock-note mono">🔒 Complete the previous level to unlock</div>' : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('roadmap-content').innerHTML = `
+    ${barHTML}
+    <div class="grid cols-2" style="margin:18px 0 20px;">
+      <div class="card hl">
+        <span class="eyebrow">Readiness</span>
+        <div class="readiness" style="margin-top:14px;">
+          <div class="ring" style="--p:${d.readiness}"><span>${d.readiness}<small style="font-size:11px;">%</small></span></div>
+          <div>
+            <div style="color:var(--muted); font-size:14px;">${esc(d.summary)}</div>
+            <div class="mono" style="margin-top:8px; font-size:12px; color:var(--faint);">
+              ${completedLevels}/${levels.length} levels · ${totalEarned.toLocaleString()}/${grandTotal.toLocaleString()} total XP
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="grid cols-2" style="gap:24px;">
+          <div class="gap-col str">
+            <h4>Strengths</h4>
+            ${d.strengths.map(s => `<div class="gap-item"><span class="ic">▲</span><span>${esc(s)}</span></div>`).join('')}
+          </div>
+          <div class="gap-col gap">
+            <h4>Gaps to close</h4>
+            ${d.gaps.map(s => `<div class="gap-item"><span class="ic">●</span><span>${esc(s)}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <span class="eyebrow">The level path</span>
+      <p style="color:var(--muted); font-size:13.5px; margin:8px 0 22px;">Complete real-world tasks to earn XP, level up your tier, and climb toward the goal.</p>
+      <div class="level-track">${levelHTML}</div>
+    </div>`;
+}
+
+/* =========================================================
+   TAB 3 — PORTFOLIO  (projects + challenges)
+========================================================= */
+function addProject() {
+  const title = val('p-title').trim();
+  if (!title) { toast('Add a project title'); return; }
+  const p = {
+    id: Date.now(),
+    title,
+    link: val('p-link').trim(),
+    desc: val('p-desc').trim(),
+    tags: val('p-tags').split(',').map(s => s.trim()).filter(Boolean)
+  };
+  const list = store.projects; list.unshift(p); store.projects = list;
+  ['p-title', 'p-link', 'p-desc', 'p-tags'].forEach(i => document.getElementById(i).value = '');
+  renderProjects();
+  store.dirty = true;
+  toast('Project added');
+}
+function deleteProject(id) {
+  store.projects = store.projects.filter(p => p.id !== id);
+  store.dirty = true;
+  renderProjects();
+}
+function renderProjects() {
+  const list = store.projects;
+  const el = document.getElementById('projects-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty" style="grid-column:1/-1;"><div class="big">🗂️</div>No projects yet. Add the work that proves your skills.</div>`;
+    return;
+  }
+  el.innerHTML = list.map(p => `
+    <div class="card proj-card">
+      <button class="del" onclick="deleteProject(${p.id})" title="Remove">✕</button>
+      <h3>${esc(p.title)}</h3>
+      ${p.desc ? `<div class="desc">${esc(p.desc)}</div>` : ''}
+      <div>${p.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+      ${p.link ? `<div style="margin-top:10px;"><a href="${esc(p.link)}" target="_blank">↗ ${esc(p.link.replace(/^https?:\/\//, ''))}</a></div>` : ''}
+    </div>`).join('');
+}
+
+/* ----- Challenges ----- */
+const challengeSchema = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    skill: { type: "string" },
+    difficulty: { type: "string" },
+    brief: { type: "string" },
+    deliverables: { type: "array", items: { type: "string" } }
+  },
+  required: ["title", "skill", "difficulty", "brief", "deliverables"]
+};
+const feedbackSchema = {
+  type: "object",
+  properties: {
+    score: { type: "integer" },
+    verdict: { type: "string" },
+    strengths: { type: "array", items: { type: "string" } },
+    improvements: { type: "array", items: { type: "string" } },
+    nextStep: { type: "string" }
+  },
+  required: ["score", "verdict", "strengths", "improvements", "nextStep"]
+};
+
+let currentChallenge = null;
+
+async function generateChallenge() {
+  if (!store.id) { toast('Fill in your identity first'); switchTo('identity'); return; }
+  setBusy('gen-challenge-btn', true);
+  document.getElementById('challenge-loading').innerHTML = loadingHTML('Designing a role-specific challenge…');
+  document.getElementById('challenge-content').innerHTML = '';
+
+  const prompt = `You are a senior hiring manager for the role implied by this goal: "${store.id.goal}".
+Design ONE realistic, hands-on skill challenge that a candidate at "${store.id.level}" level should be able to attempt to prove readiness for that goal. It should target a skill they likely need to strengthen.
+
+Candidate context:
+${identitySummary()}
+
+Return:
+- "title": short challenge name.
+- "skill": the primary skill being tested.
+- "difficulty": Easy / Medium / Hard relative to their level.
+- "brief": 2-4 sentences describing the task, like a take-home prompt.
+- "deliverables": 2-4 concrete things they must produce.`;
+
+  try {
+    currentChallenge = await callGemini(prompt, challengeSchema);
+    renderChallenge(currentChallenge);
+  } catch (e) {
+    document.getElementById('challenge-content').innerHTML = `<div class="alert">${esc(e.message)}</div>`;
+  } finally {
+    document.getElementById('challenge-loading').innerHTML = '';
+    setBusy('gen-challenge-btn', false);
+  }
+}
+
+function renderChallenge(c) {
+  document.getElementById('challenge-content').innerHTML = `
+    <div class="card">
+      <div class="row" style="margin-bottom:4px;">
+        <span class="pill">${esc(c.skill)}</span>
+        <span class="tag">${esc(c.difficulty)}</span>
+      </div>
+      <div class="challenge-box">
+        <div class="c-title">${esc(c.title)}</div>
+        <div style="color:var(--muted); font-size:14px;">${esc(c.brief)}</div>
+      </div>
+      <span class="lbl mono" style="font-size:11px; color:var(--faint); text-transform:uppercase; letter-spacing:.07em;">Deliverables</span>
+      <ul style="margin:8px 0 18px 18px; color:var(--muted); font-size:13.5px;">
+        ${c.deliverables.map(d => `<li style="margin-bottom:4px;">${esc(d)}</li>`).join('')}
+      </ul>
+      <label class="field"><span>Your solution / approach</span>
+        <textarea id="solution-input" style="min-height:130px;" placeholder="Describe your approach, paste code, or outline how you'd solve this..."></textarea>
+      </label>
+      <button class="btn" id="feedback-btn" onclick="getFeedback()">Get AI feedback →</button>
+      <div id="feedback-loading"></div>
+      <div id="feedback-content"></div>
+    </div>`;
+}
+
+async function getFeedback() {
+  const sol = val('solution-input').trim();
+  if (!sol) { toast('Write your solution first'); return; }
+  setBusy('feedback-btn', true);
+  document.getElementById('feedback-loading').innerHTML = loadingHTML('Reviewing like a hiring manager…');
+
+  const prompt = `You are a strict but fair senior hiring manager reviewing a candidate's submission for this challenge.
+
+CHALLENGE: ${currentChallenge.title}
+Skill tested: ${currentChallenge.skill} (${currentChallenge.difficulty})
+Brief: ${currentChallenge.brief}
+Deliverables: ${currentChallenge.deliverables.join('; ')}
+
+Candidate goal: ${store.id.goal} | Level: ${store.id.level}
+
+CANDIDATE SUBMISSION:
+"""${sol}"""
+
+Evaluate honestly. Return:
+- "score": integer 0-100.
+- "verdict": 1 sentence overall judgment.
+- "strengths": 2-4 things they did well.
+- "improvements": 2-4 specific, actionable improvements.
+- "nextStep": one concrete next action to level up this skill.`;
+
+  try {
+    const fb = await callGemini(prompt, feedbackSchema);
+    renderFeedback(fb);
+  } catch (e) {
+    document.getElementById('feedback-content').innerHTML = `<div class="alert">${esc(e.message)}</div>`;
+  } finally {
+    document.getElementById('feedback-loading').innerHTML = '';
+    setBusy('feedback-btn', false);
+  }
+}
+
+function renderFeedback(fb) {
+  const color = fb.score >= 75 ? 'var(--green)' : fb.score >= 50 ? 'var(--amber)' : 'var(--red)';
+  document.getElementById('feedback-content').innerHTML = `
+    <div class="feedback-box">
+      <div class="row" style="align-items:center; margin-bottom:14px;">
+        <div class="score-badge" style="background:${color}1f; color:${color}; border:1px solid ${color}55;">${fb.score}</div>
+        <div style="font-size:14.5px; font-weight:600;">${esc(fb.verdict)}</div>
+      </div>
+      <div class="grid cols-2" style="gap:20px;">
+        <div class="gap-col str"><h4>What worked</h4>
+          ${fb.strengths.map(s => `<div class="gap-item"><span class="ic">▲</span><span>${esc(s)}</span></div>`).join('')}
+        </div>
+        <div class="gap-col gap"><h4>Improve</h4>
+          ${fb.improvements.map(s => `<div class="gap-item"><span class="ic">●</span><span>${esc(s)}</span></div>`).join('')}
+        </div>
+      </div>
+      <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+        <span class="lbl mono" style="font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:.07em;">Next step</span>
+        <div style="color:var(--text); font-size:14px; margin-top:4px;">${esc(fb.nextStep)}</div>
+      </div>
+    </div>`;
+}
+
+/* =========================================================
+   API KEY MODAL
+========================================================= */
+function openKeyModal() {
+  document.getElementById('apiKeyInput').value = store.key;
+  document.getElementById('modelInput').value = store.model;
+  document.getElementById('keyError').innerHTML = '';
+  document.getElementById('keyModal').classList.add('show');
+}
+function closeKeyModal() { document.getElementById('keyModal').classList.remove('show'); }
+function saveKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) { document.getElementById('keyError').innerHTML = '<div class="alert">Enter a key or get one at aistudio.google.com/apikey</div>'; return; }
+  store.key = k;
+  store.model = document.getElementById('modelInput').value;
+  updateKeyStatus();
+  closeKeyModal();
+  toast('Gemini connected ✓');
+}
+function updateKeyStatus() {
+  if (PROXY_MODE) {
+    const ok = proxyKeyConfigured;
+    document.getElementById('keyDot').classList.toggle('ok', ok);
+    document.getElementById('keyLabel').textContent = ok ? 'Gemini connected (server)' : 'Server key missing';
+    return;
+  }
+  const ok = !!store.key;
+  document.getElementById('keyDot').classList.toggle('ok', ok);
+  document.getElementById('keyLabel').textContent = ok ? 'Gemini connected' : 'Connect Gemini';
+}
+
+// In proxy mode the key lives server-side; ask the server if it's configured.
+async function initProxyStatus() {
+  if (!PROXY_MODE) return;
+  // The key button just shows server status instead of opening the modal.
+  const btn = document.querySelector('.key-btn');
+  btn.setAttribute('onclick', '');
+  btn.style.cursor = 'default';
+  try {
+    const s = await fetch('/api/status').then(r => r.json());
+    proxyKeyConfigured = !!s.keyConfigured;
+    if (s.model) store.model = s.model;
+  } catch {}
+  updateKeyStatus();
+}
+
+/* =========================================================
+   HELPERS
+========================================================= */
+function switchTo(tab) { document.querySelector(`.tab[data-tab="${tab}"]`).click(); }
+function setBusy(id, busy) { const b = document.getElementById(id); if (b) b.disabled = busy; }
+function loadingHTML(msg) { return `<div class="loading"><div class="spin"></div>${esc(msg)}</div>`; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+let toastT;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+loadIdentity();
+renderProjects();
+updateKeyStatus();
+initProxyStatus();
+if (store.roadmap) renderRoadmap(store.roadmap);
+document.getElementById('keyModal').addEventListener('click', e => { if (e.target.id === 'keyModal') closeKeyModal(); });
+</script>
+</body>
+</html>

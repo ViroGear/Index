@@ -1,0 +1,12 @@
+{
+  "name": "career-copilot",
+  "version": "0.1.0",
+  "description": "AI career copilot — build your roadmap, portfolio, and real skills toward a dream goal. Gemini XPRIZE prototype.",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
