@@ -165,6 +165,35 @@
   .empty { text-align: center; padding: 50px 20px; color: var(--faint); border: 1px dashed var(--border-2); border-radius: var(--radius); }
   .empty .big { font-size: 28px; margin-bottom: 8px; }
 
+  /* ---------- Upload zone ---------- */
+  .upload-zone {
+    border: 1.5px dashed var(--border-2); border-radius: 11px;
+    padding: 32px 20px; text-align: center; cursor: pointer;
+    transition: 0.15s; background: var(--bg-2);
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--cyan); background: var(--cyan-glow);
+  }
+  .upload-icon {
+    width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border-2);
+    display: inline-grid; place-items: center; font-size: 18px;
+    margin-bottom: 12px; color: var(--muted);
+  }
+  .upload-zone:hover .upload-icon, .upload-zone.drag-over .upload-icon {
+    border-color: var(--cyan); color: var(--cyan);
+  }
+  .upload-label { font-size: 14px; color: var(--text); margin-bottom: 4px; }
+  .upload-sub { font-size: 12px; color: var(--faint); font-family: ui-monospace, monospace; }
+  .upload-file-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--bg-2); border: 1px solid var(--border-2);
+    border-radius: 9px; padding: 10px 14px; margin-top: 14px;
+  }
+  .upload-file-icon { font-size: 20px; flex-shrink: 0; }
+  .upload-file-name { flex: 1; font-size: 13.5px; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .parse-field-updated { animation: flash-update 1.2s ease; }
+  @keyframes flash-update { 0%,100% { box-shadow: none; } 30% { box-shadow: 0 0 0 3px rgba(34,211,238,0.35); } }
+
   .xp-bar { padding: 20px 22px; }
   .xp-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .xp-nums { font-family: ui-monospace, monospace; font-weight: 700; font-size: 15px; color: var(--cyan); }
@@ -364,7 +393,33 @@
           <label class="field"><span>Context / anything else</span><textarea id="f-context" placeholder="Non-CS degree, 2 side projects, comfortable with frontend but weak on data structures."></textarea></label>
         </div>
       </div>
-      <div class="row" style="margin-top:8px;">
+      <!-- File upload -->
+      <div class="card upload-card" id="upload-card" style="margin-top:18px;">
+        <span class="eyebrow" style="margin-bottom:14px; display:inline-flex;">Resume / CV upload</span>
+        <div class="upload-zone" id="upload-zone"
+          ondragover="event.preventDefault(); this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="handleFileDrop(event)"
+          onclick="document.getElementById('file-input').click()">
+          <input type="file" id="file-input" accept=".pdf,.txt,.docx,.doc,.png,.jpg,.jpeg"
+            style="display:none" onchange="handleFileSelect(event)" />
+          <div class="upload-icon">↑</div>
+          <div class="upload-label">Drop your resume here or <span style="color:var(--cyan);">click to browse</span></div>
+          <div class="upload-sub">PDF · DOCX · TXT · PNG · JPG</div>
+        </div>
+        <div id="upload-file-info" style="display:none;">
+          <div class="upload-file-row">
+            <span class="upload-file-icon">📄</span>
+            <span id="upload-file-name" class="upload-file-name"></span>
+            <button class="btn ghost sm" onclick="clearUpload()" style="padding:4px 10px; font-size:12px;">✕ Remove</button>
+            <button class="btn sm" id="parse-btn" onclick="parseResume()" style="padding:6px 14px;">✦ Parse with Gemini</button>
+          </div>
+          <div id="parse-loading"></div>
+          <div id="parse-result"></div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:14px;">
         <button class="btn" onclick="saveIdentity()">Save identity →</button>
         <button class="btn ghost sm" onclick="startConvoMode()">✦ Let Gemini interview me instead</button>
         <span class="spacer"></span>
@@ -614,6 +669,147 @@ document.querySelectorAll('.tab').forEach(t => {
     if (t.dataset.tab === 'portfolio') renderProjects();
   });
 });
+
+/* IDENTITY — file upload & resume parsing */
+let uploadedFile = null;
+
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) setUploadFile(file);
+}
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) setUploadFile(file);
+}
+function setUploadFile(file) {
+  uploadedFile = file;
+  document.getElementById('upload-zone').style.display = 'none';
+  document.getElementById('upload-file-info').style.display = 'block';
+  document.getElementById('upload-file-name').textContent = file.name;
+  document.getElementById('parse-result').innerHTML = '';
+  document.getElementById('parse-loading').innerHTML = '';
+}
+function clearUpload() {
+  uploadedFile = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('upload-zone').style.display = '';
+  document.getElementById('upload-file-info').style.display = 'none';
+  document.getElementById('parse-result').innerHTML = '';
+}
+
+async function parseResume() {
+  if (!uploadedFile) return;
+  if (!canAutoGenerate()) { openKeyModal(); return; }
+  setBusy('parse-btn', true);
+  document.getElementById('parse-loading').innerHTML = loadingHTML('Reading your resume…');
+  document.getElementById('parse-result').innerHTML = '';
+
+  try {
+    const mime = uploadedFile.type || guessMime(uploadedFile.name);
+    const b64 = await fileToBase64(uploadedFile);
+    const isText = mime === 'text/plain';
+
+    // Build Gemini request manually (multimodal — can't use the shared callGemini helper)
+    const extractPrompt = `Extract the following from this resume/CV document. Return ONLY valid JSON with these exact keys:
+{
+  "name": "full name or empty string",
+  "role": "current job title or status (e.g. 'Software Engineer at Google', 'CS Student', 'Self-taught developer')",
+  "skills": "comma-separated list of technical skills",
+  "context": "1-2 sentence summary of their background, experience highlights, and any notable achievements"
+}
+Be concise and factual. Extract only what is present in the document.`;
+
+    let parts;
+    if (isText) {
+      const text = await fileToText(uploadedFile);
+      parts = [{ text: `${extractPrompt}\n\nDocument content:\n${text}` }];
+    } else {
+      parts = [
+        { inline_data: { mime_type: mime, data: b64 } },
+        { text: extractPrompt }
+      ];
+    }
+
+    const key = store.key;
+    const endpoint = PROXY_MODE
+      ? null  // proxy doesn't handle multimodal yet — go direct
+      : null;
+
+    // Always call Gemini directly for multimodal (key required)
+    const apiKey = PROXY_MODE ? '' : key;
+    if (!key && !PROXY_MODE) { openKeyModal(); throw new Error('API key required for file parsing.'); }
+
+    // In proxy mode, fall back to direct if the server doesn't have a multimodal route.
+    // Use store.key if set, otherwise ask.
+    const useKey = store.key;
+    if (!useKey) { openKeyModal(); throw new Error('Paste your Gemini key to parse files.'); }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${store.model}:generateContent?key=${encodeURIComponent(useKey)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { temperature: 0.2, responseMimeType: 'application/json' }
+      })
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      throw new Error(e.error?.message || `Gemini error ${res.status}`);
+    }
+    const data = await res.json();
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    // Auto-fill fields that are non-empty in the parsed result
+    const map = { name: 'f-name', role: 'f-role', skills: 'f-skills', context: 'f-context' };
+    let filled = 0;
+    for (const [k, id] of Object.entries(map)) {
+      if (parsed[k] && parsed[k].trim()) {
+        const el = document.getElementById(id);
+        el.value = parsed[k];
+        el.classList.add('parse-field-updated');
+        setTimeout(() => el.classList.remove('parse-field-updated'), 1400);
+        filled++;
+      }
+    }
+    document.getElementById('parse-loading').innerHTML = '';
+    document.getElementById('parse-result').innerHTML = `
+      <div style="margin-top:10px; padding:10px 12px; background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.25); border-radius:8px; font-size:13px; color:var(--green);">
+        ✓ Filled ${filled} field${filled !== 1 ? 's' : ''} from your resume. Review and save.
+      </div>`;
+  } catch (e) {
+    document.getElementById('parse-loading').innerHTML = '';
+    document.getElementById('parse-result').innerHTML = `<div class="alert">${esc(e.message)}</div>`;
+  } finally {
+    setBusy('parse-btn', false);
+  }
+}
+
+function guessMime(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  return { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    doc: 'application/msword', txt: 'text/plain' }[ext] || 'application/octet-stream';
+}
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+function fileToText(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsText(file);
+  });
+}
 
 /* IDENTITY */
 function loadIdentity() {
