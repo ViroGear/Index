@@ -492,10 +492,56 @@
     }
   }
 
+  /* ===================== Sidebar shell ===================== */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 250px; flex-shrink: 0; position: fixed; inset: 0 auto 0 0; height: 100vh;
+    background: var(--card); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 18px 14px 16px; z-index: 60;
+  }
+  .side-brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 20px; }
+  .side-brand h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+  .side-brand p { font-size: 9px; color: var(--faint); letter-spacing: 0.09em; text-transform: uppercase; }
+
+  .sidebar nav.tabs {
+    display: flex; flex-direction: column; gap: 2px; margin: 0;
+    background: none; border: none; padding: 0; width: auto;
+  }
+  .sidebar .tab {
+    width: 100%; justify-content: flex-start; gap: 12px; position: relative;
+    padding: 10px 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--muted);
+  }
+  .sidebar .tab .t-ico { font-size: 15px; width: 22px; text-align: center; flex-shrink: 0; opacity: .8; }
+  .sidebar .tab .t-name { flex: 1; text-align: left; }
+  .sidebar .tab:hover { background: var(--bg-2); color: var(--text); transform: none; box-shadow: none; }
+  .sidebar .tab.active { background: var(--accent-soft); color: var(--accent-dim); box-shadow: none; font-weight: 600; }
+  .sidebar .tab.active .t-ico { opacity: 1; }
+  .sidebar .tab.active::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+  .sidebar .tab .badge { margin-left: auto; }
+
+  .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .side-foot .share-btn, .side-foot .key-btn { width: 100%; justify-content: center; }
+
+  .main { flex: 1; margin-left: 250px; min-width: 0; }
+  .main > .wrap { padding-top: 32px; }
+
+  .topbar { display: none; align-items: center; gap: 12px; padding: 11px 16px; position: sticky; top: 0;
+    background: rgba(250,250,248,0.85); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); z-index: 40; }
+  .topbar-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+  .hamburger { background: var(--card); border: 1px solid var(--border-2); border-radius: 9px; width: 38px; height: 38px;
+    font-size: 16px; cursor: pointer; color: var(--text); display: grid; place-items: center; box-shadow: var(--shadow-sm); }
+  .side-scrim { display: none; }
+
+  @media (max-width: 880px) {
+    .sidebar { transform: translateX(-100%); transition: transform .3s var(--ease-out); box-shadow: var(--shadow-lg); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .topbar { display: flex; }
+    .side-scrim.show { display: block; position: fixed; inset: 0; background: rgba(15,23,42,0.32); backdrop-filter: blur(2px); z-index: 55; }
+  }
+
   @media (max-width: 640px) {
     .wrap { padding: 0 16px; }
-    nav.tabs { margin: 20px 0 24px; }
-    .tab { padding: 8px 12px; font-size: 12.5px; }
     .panel-head h2 { font-size: 24px; }
     .stat-row { grid-template-columns: 1fr 1fr; }
   }
@@ -503,30 +549,34 @@
 </head>
 <body>
 
-<header>
-  <div class="wrap header-inner">
-    <div class="brand">
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">
       <div class="logo-mark">C</div>
       <div><h1>Career Copilot</h1><p class="mono">IDEA → SKILLS → PROOF</p></div>
     </div>
-    <div class="header-right">
+    <nav class="tabs">
+      <button class="tab active" data-tab="identity"><span class="t-ico">👤</span><span class="t-name">Identity</span></button>
+      <button class="tab" data-tab="roadmap"><span class="t-ico">🗺️</span><span class="t-name">Roadmap</span></button>
+      <button class="tab" data-tab="portfolio"><span class="t-ico">🗂️</span><span class="t-name">Portfolio</span></button>
+      <button class="tab" data-tab="interview"><span class="t-ico">🎙️</span><span class="t-name">Interview Prep</span><span id="interview-lock-icon" style="display:none;">🔒</span></button>
+      <button class="tab" data-tab="coach"><span class="t-ico">🧠</span><span class="t-name">Daily Coach</span><span class="badge" id="coach-badge" style="display:none">!</span></button>
+    </nav>
+    <div class="side-foot">
       <button class="share-btn" onclick="openShareModal()">↗ Share progress</button>
       <button class="key-btn" onclick="openKeyModal()">
         <span class="key-dot" id="keyDot"></span>
         <span id="keyLabel">Connect Gemini</span>
       </button>
     </div>
-  </div>
-</header>
+  </aside>
 
-<div class="wrap">
-  <nav class="tabs">
-    <button class="tab active" data-tab="identity"><span class="num">01</span> Identity</button>
-    <button class="tab" data-tab="roadmap"><span class="num">02</span> Roadmap</button>
-    <button class="tab" data-tab="portfolio"><span class="num">03</span> Portfolio</button>
-    <button class="tab" data-tab="interview"><span class="num">04</span> Interview Prep <span id="interview-lock-icon" style="display:none;">🔒</span></button>
-    <button class="tab" data-tab="coach"><span class="num">05</span> Daily Coach <span class="badge" id="coach-badge" style="display:none">!</span></button>
-  </nav>
+  <main class="main">
+    <div class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+      <span class="topbar-title">Career Copilot</span>
+    </div>
+    <div class="wrap">
 
   <!-- TAB 1: IDENTITY -->
   <section class="panel active" id="panel-identity">
@@ -725,7 +775,10 @@
     <p class="sub-desc">Your coaching log — how you've been adapting over time.</p>
     <div id="checkin-history"></div>
   </section>
-</div>
+    </div><!-- /.wrap -->
+  </main>
+  <div class="side-scrim" id="sideScrim" onclick="closeSidebar()"></div>
+</div><!-- /.app -->
 
 <!-- PROOF MODAL -->
 <div class="modal-bg" id="proofModal">
@@ -865,8 +918,20 @@ document.querySelectorAll('.tab').forEach(t => {
     if (t.dataset.tab === 'roadmap') enterRoadmapTab();
     if (t.dataset.tab === 'portfolio') renderProjects();
     if (t.dataset.tab === 'interview') refreshInterviewLock();
+    closeSidebar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 });
+
+/* Sidebar (off-canvas on mobile) */
+function toggleSidebar() {
+  const open = document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sideScrim').classList.toggle('show', open);
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sideScrim').classList.remove('show');
+}
 
 /* IDENTITY — file upload & resume parsing */
 let uploadedFiles = [];
@@ -1090,7 +1155,7 @@ async function generateRoadmap() {
   setBusy('regen-roadmap-btn', true);
   document.getElementById('roadmap-loading').innerHTML = loadingHTML('Analyzing your gap and building milestones…');
   const rc = document.getElementById('roadmap-content'); rc.className=''; rc.innerHTML = roadmapSkeleton();
-  const prompt = `You are an elite career coach. Design a GAMIFIED, level-based career roadmap (RPG skill tree) toward this person's dream goal.\n\n${identitySummary()}\n\nScoring must be REALISTIC and CALIBRATED — not demoralizing. Use this scale for BOTH "readiness" and every radar "score":\n  • 0-15  = essentially no foundation in this area\n  • 16-35 = beginner with real fundamentals started\n  • 36-55 = developing / intermediate, can do guided work\n  • 56-75 = competitive, independently capable\n  • 76-90 = strong, near job-ready\n  • 91-100 = expert / fully ready now\nGive credit for existing skills, education, and dedicated time. A motivated student with foundational skills and a multi-month runway toward an ambitious goal should typically land in the 20-40 readiness range, NOT single digits. Reserve sub-15 scores only for someone with truly zero relevant background. Vary the 6 radar scores realistically (some higher, some lower) — avoid clustering them all at the bottom.\n\nReturn:\n- "summary": 1-2 sentence honest but encouraging assessment.\n- "readiness": integer 0-100, calibrated per the scale above.\n- "strengths": 3-5 concrete current strengths.\n- "gaps": 3-6 specific missing skills.\n- "radar": EXACTLY 6 core competency axes that matter most for this specific goal (e.g. for a SWE: "DSA & Algorithms", "System Design", "Coding Fluency", "Communication", "Projects/Portfolio", "Domain Knowledge"). Each has a short "axis" label (2-3 words) and an integer "score" 0-100 calibrated per the scale above. Spread the scores realistically.\n- "levels": 5-7 sequential levels easiest→hardest. Each: tier (evocative; FINAL=achieving goal), timeframe, focus (1-2 sentences), skills (2-4), tasks (3-5 verifiable with xp 100-500).\nBe specific. Tasks must be verifiable — candidates must show proof.`;
+  const prompt = `You are an elite career coach. Design a GAMIFIED, level-based career roadmap (RPG skill tree) toward this person's dream goal.\n\n${identitySummary()}\n\nScoring must be REALISTIC and calibrated against the ACTUAL bar of THIS specific goal — measure how close they are to credibly meeting that goal's real-world standard TODAY, given their current skills.\n\nSTEP 1 — judge the goal's difficulty bar:\n  • Elite / ultra-competitive (Ivy League admission, NCAA D1 or pro athletics, FAANG/top-lab roles, top-tier grad programs): the bar is extremely high. A beginner or hobbyist baseline should score LOW (roughly 5-20 readiness) — there is a long, hard road ahead and the number must reflect that honestly.\n  • Competitive but attainable (solid mid-size company role, regional competition, respected program): moderate bar.\n  • Accessible / entry-level (first junior role, local club, intro certification): lower bar — foundational skills count for much more.\nSTEP 2 — score against that bar using this scale (for BOTH "readiness" and every radar "score"):\n  • 0-15  = essentially no foundation relative to the goal's bar\n  • 16-35 = beginner with real fundamentals started\n  • 36-55 = developing / intermediate vs the bar\n  • 56-75 = competitive, independently capable\n  • 76-90 = strong, near goal-ready\n  • 91-100 = fully ready now\nDo NOT inflate. If someone has only foundational/hobby skills and is targeting an elite goal, readiness should be genuinely low (single digits to ~20) — that is honest, not demoralizing, because the roadmap shows the climb. Only give credit that is real. Avoid a flat "everyone gets 20-40" floor. Vary the 6 radar scores realistically against the goal's bar — some higher, some lower, not all clustered.\n\nReturn:\n- "summary": 1-2 sentence honest but encouraging assessment.\n- "readiness": integer 0-100, calibrated per the scale above.\n- "strengths": 3-5 concrete current strengths.\n- "gaps": 3-6 specific missing skills.\n- "radar": EXACTLY 6 core competency axes that matter most for this specific goal (e.g. for a SWE: "DSA & Algorithms", "System Design", "Coding Fluency", "Communication", "Projects/Portfolio", "Domain Knowledge"). Each has a short "axis" label (2-3 words) and an integer "score" 0-100 calibrated per the scale above. Spread the scores realistically.\n- "levels": 5-7 sequential levels easiest→hardest. Each: tier (evocative; FINAL=achieving goal), timeframe, focus (1-2 sentences), skills (2-4), tasks (3-5 verifiable with xp 100-500).\nBe specific. Tasks must be verifiable — candidates must show proof.`;
   try {
     const data = await callGemini(prompt, roadmapSchema);
     store.roadmap = data; store.progress = []; store.proofs = {}; store.dirty = false;
@@ -1535,9 +1600,8 @@ renderCheckinHistory(); checkCoachBadge(); refreshInterviewLock();
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
 document.getElementById('conv-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))sendConvMessage();});
 document.getElementById('interview-answer').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))submitAnswer();});
-/* header gains a soft shadow once the page scrolls */
-const _hdr=document.querySelector('header');
-addEventListener('scroll',()=>{_hdr.classList.toggle('scrolled', window.scrollY>8);},{passive:true});
+/* close the mobile sidebar on Escape */
+addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
 </script>
 </body>
 </html>
