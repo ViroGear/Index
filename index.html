@@ -906,7 +906,7 @@
       </select>
     </label>
     <div class="row" style="margin-top:8px;">
-      <button class="btn" onclick="saveKey()">Save</button>
+      <button class="btn" id="saveKeyBtn" onclick="saveKey()">Connect</button>
       <button class="btn ghost" onclick="closeKeyModal()">Cancel</button>
     </div>
     <div id="keyError"></div>
@@ -1619,9 +1619,44 @@ function copyShareText() {
 }
 
 /* KEY MODAL */
-function openKeyModal(){document.getElementById('apiKeyInput').value=store.key;document.getElementById('modelInput').value=store.model;document.getElementById('keyError').innerHTML='';document.getElementById('keyModal').classList.add('show');}
+function openKeyModal(){document.getElementById('apiKeyInput').value=store.key;document.getElementById('modelInput').value=store.model;document.getElementById('keyError').innerHTML='';document.getElementById('saveKeyBtn').disabled=false;document.getElementById('keyModal').classList.add('show');}
 function closeKeyModal(){document.getElementById('keyModal').classList.remove('show');}
-function saveKey(){const k=document.getElementById('apiKeyInput').value.trim();if(!k){document.getElementById('keyError').innerHTML='<div class="alert">Enter a key first.</div>';return;}store.key=k;store.model=document.getElementById('modelInput').value;updateKeyStatus();closeKeyModal();toast('Gemini connected ✓');}
+async function saveKey(){
+  const k = document.getElementById('apiKeyInput').value.trim();
+  const errEl = document.getElementById('keyError');
+  if(!k){ errEl.innerHTML='<div class="alert">Enter a key first.</div>'; return; }
+  const btn = document.getElementById('saveKeyBtn');
+  const wantModel = document.getElementById('modelInput').value;
+  btn.disabled = true;
+  errEl.innerHTML = '<div class="loading" style="padding:8px 0;"><span class="spin"></span>Validating your key…</div>';
+  try {
+    // Validate the key by listing models — this is what catches a bad/expired/mistyped key.
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(k)}`);
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){
+      const msg = data?.error?.message || `Validation failed (HTTP ${res.status})`;
+      errEl.innerHTML = `<div class="alert">${esc(msg)}<br><span style="opacity:.85;">Copy the full key (starts with "AIza…") from <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> — no spaces.</span></div>`;
+      btn.disabled = false; return;
+    }
+    // Key is valid. Make sure the chosen model is actually available to this key; if not, auto-pick one.
+    const usable = (data.models||[])
+      .filter(m => (m.supportedGenerationMethods||[]).includes('generateContent'))
+      .map(m => (m.name||'').replace('models/',''));
+    let model = wantModel;
+    if(usable.length && !usable.includes(model)){
+      model = usable.find(n=>n.includes('2.5-flash')) || usable.find(n=>n.includes('flash')) || usable.find(n=>n.includes('2.0')) || usable[0];
+    }
+    store.key = k; store.model = model; useProxy = false; proxyKeyConfigured = false;
+    updateKeyStatus(); closeKeyModal();
+    toast(model!==wantModel ? `Gemini connected ✓ (using ${model})` : 'Gemini connected ✓');
+    // refresh whatever's on screen now that we can generate
+    updatePlayerChip();
+    if(document.getElementById('panel-roadmap').classList.contains('active')) enterRoadmapTab();
+  } catch(e){
+    errEl.innerHTML = `<div class="alert">Couldn't reach the Gemini API: ${esc(e.message)}. Check your internet connection.</div>`;
+    btn.disabled = false;
+  }
+}
 function updateKeyStatus(){if(useProxy){document.getElementById('keyDot').classList.toggle('ok',proxyKeyConfigured);document.getElementById('keyLabel').textContent=proxyKeyConfigured?'Gemini connected (server)':'Server key missing';return;}const ok=!!store.key;document.getElementById('keyDot').classList.toggle('ok',ok);document.getElementById('keyLabel').textContent=ok?'Gemini connected':'Connect Gemini';}
 async function detectProxy(){
   // Probe for the Node proxy. If absent (e.g. GitHub Pages static hosting),
