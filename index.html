@@ -939,7 +939,9 @@ const store = {
   set model(v)    { localStorage.setItem('cc_model', v); },
 };
 
-const PROXY_MODE = location.protocol === 'http:' || location.protocol === 'https:';
+// Proxy is detected at runtime (see detectProxy). Defaults to direct browser-key
+// mode so the app works on static hosting like GitHub Pages.
+let useProxy = false;
 let proxyKeyConfigured = false;
 
 function parseModelText(text, schema) {
@@ -952,7 +954,7 @@ function parseModelText(text, schema) {
 }
 
 async function callGemini(prompt, schema) {
-  if (PROXY_MODE) {
+  if (useProxy) {
     const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, schema, model: store.model }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
@@ -1234,7 +1236,7 @@ async function generateRoadmap() {
 }
 
 /* Can we call Gemini right now? (server key in proxy mode, or a browser key otherwise) */
-function canGenerate() { return PROXY_MODE ? proxyKeyConfigured : !!store.key; }
+function canGenerate() { return useProxy ? proxyKeyConfigured : !!store.key; }
 
 /* Decide what to show when the Roadmap tab opens — auto-generates instead of a button */
 function enterRoadmapTab() {
@@ -1620,8 +1622,24 @@ function copyShareText() {
 function openKeyModal(){document.getElementById('apiKeyInput').value=store.key;document.getElementById('modelInput').value=store.model;document.getElementById('keyError').innerHTML='';document.getElementById('keyModal').classList.add('show');}
 function closeKeyModal(){document.getElementById('keyModal').classList.remove('show');}
 function saveKey(){const k=document.getElementById('apiKeyInput').value.trim();if(!k){document.getElementById('keyError').innerHTML='<div class="alert">Enter a key first.</div>';return;}store.key=k;store.model=document.getElementById('modelInput').value;updateKeyStatus();closeKeyModal();toast('Gemini connected ✓');}
-function updateKeyStatus(){if(PROXY_MODE){document.getElementById('keyDot').classList.toggle('ok',proxyKeyConfigured);document.getElementById('keyLabel').textContent=proxyKeyConfigured?'Gemini connected (server)':'Server key missing';return;}const ok=!!store.key;document.getElementById('keyDot').classList.toggle('ok',ok);document.getElementById('keyLabel').textContent=ok?'Gemini connected':'Connect Gemini';}
-async function initProxyStatus(){if(!PROXY_MODE)return;const btn=document.querySelector('.key-btn');btn.setAttribute('onclick','');btn.style.cursor='default';try{const s=await fetch('/api/status').then(r=>r.json());proxyKeyConfigured=!!s.keyConfigured;if(s.model)store.model=s.model;}catch{}updateKeyStatus();}
+function updateKeyStatus(){if(useProxy){document.getElementById('keyDot').classList.toggle('ok',proxyKeyConfigured);document.getElementById('keyLabel').textContent=proxyKeyConfigured?'Gemini connected (server)':'Server key missing';return;}const ok=!!store.key;document.getElementById('keyDot').classList.toggle('ok',ok);document.getElementById('keyLabel').textContent=ok?'Gemini connected':'Connect Gemini';}
+async function detectProxy(){
+  // Probe for the Node proxy. If absent (e.g. GitHub Pages static hosting),
+  // stay in direct mode so the user pastes their own Gemini key.
+  try {
+    const res = await fetch('/api/status', { cache:'no-store' });
+    if(res.ok){
+      const s = await res.json();
+      if(s && s.proxy){
+        useProxy = true;
+        proxyKeyConfigured = !!s.keyConfigured;
+        if(s.model) store.model = s.model;
+        const btn=document.querySelector('.key-btn'); btn.setAttribute('onclick',''); btn.style.cursor='default';
+      }
+    }
+  } catch {}
+  updateKeyStatus();
+}
 
 /* HELPERS */
 function switchTo(tab){document.querySelector(`.tab[data-tab="${tab}"]`).click();}
@@ -1886,7 +1904,7 @@ function renderPlayer(){
 }
 
 /* INIT */
-loadIdentity(); renderProjects(); updateKeyStatus(); initProxyStatus();
+loadIdentity(); renderProjects(); updateKeyStatus(); detectProxy();
 if(store.roadmap) renderRoadmap(store.roadmap, {animate:true});
 renderCheckinHistory(); checkCoachBadge(); refreshInterviewLock();
 ensurePlayer(); updatePlayerChip();

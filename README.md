@@ -4,10 +4,12 @@ AI career copilot — pick a dream goal (e.g. *"SWE role at Meta"*), and Gemini 
 roadmap, analyzes your skill gaps, and gives you real-world challenges to prove yourself.
 Built for the **Build with Gemini XPRIZE**.
 
-Three tabs:
-1. **User Identity** — who you are + your goal.
-2. **Roadmap** — AI readiness score, gap analysis, and milestone plan.
-3. **Portfolio** — your projects + AI-generated skill challenges with scored feedback.
+**🔗 Live demo:** https://virogear.github.io/Index/
+*(Bring your own free Gemini key — click "Connect Gemini" and paste one from
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey). It's stored only in your browser.)*
+
+Six tabs: **Identity → Roadmap → Portfolio → Interview Prep → Daily Coach → Player** — including
+a gamified XP/level system, an evolving character, a rival bracket, and unlockable mentor wisdom.
 
 ## Two ways to run
 
