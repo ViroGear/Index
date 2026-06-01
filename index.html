@@ -395,6 +395,12 @@
   .radar-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 22px; align-items: center; margin-top: 8px; }
   @media (max-width: 720px) { .radar-grid { grid-template-columns: 1fr; } }
   .radar-svg { display: flex; justify-content: center; }
+
+  /* locked feature screen */
+  .lock-screen { background: linear-gradient(160deg, #F7F9FF, var(--card)); }
+  .lock-emoji { font-size: 52px; display: inline-block; animation: lockFloat 3s var(--ease-io) infinite; }
+  @keyframes lockFloat { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+  #interview-lock-icon { font-size: 12px; filter: grayscale(0.2); }
   .radar-poly { transition: opacity .3s; }
   .rm-animate .radar-poly { animation: radarIn .9s var(--ease-out) both; transform-box: fill-box; transform-origin: center; }
   @keyframes radarIn { from { transform: scale(.1); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -518,7 +524,7 @@
     <button class="tab active" data-tab="identity"><span class="num">01</span> Identity</button>
     <button class="tab" data-tab="roadmap"><span class="num">02</span> Roadmap</button>
     <button class="tab" data-tab="portfolio"><span class="num">03</span> Portfolio</button>
-    <button class="tab" data-tab="interview"><span class="num">04</span> Interview Prep</button>
+    <button class="tab" data-tab="interview"><span class="num">04</span> Interview Prep <span id="interview-lock-icon" style="display:none;">🔒</span></button>
     <button class="tab" data-tab="coach"><span class="num">05</span> Daily Coach <span class="badge" id="coach-badge" style="display:none">!</span></button>
   </nav>
 
@@ -604,8 +610,7 @@
       <p>Gemini analyzes your gap and builds a milestone plan. Complete tasks to earn XP and level up — every completed task requires proof so your progress is real.</p>
     </div>
     <div class="row" style="margin-bottom:22px;">
-      <button class="btn" id="gen-roadmap-btn" onclick="generateRoadmap()">✦ Generate my roadmap</button>
-      <button class="btn ghost sm" id="regen-roadmap-btn" onclick="generateRoadmap()" style="display:none;">Regenerate</button>
+      <button class="btn ghost sm" id="regen-roadmap-btn" onclick="generateRoadmap()" style="display:none;">↻ Regenerate roadmap</button>
     </div>
     <div id="roadmap-loading"></div>
     <div id="roadmap-content"></div>
@@ -651,36 +656,42 @@
       <h2>AI <span class="accent">interview</span> simulator.</h2>
       <p>Gemini plays the role of a real interviewer at your target company. It asks questions calibrated to your goal and level, then gives brutal honest feedback after each answer.</p>
     </div>
-    <div class="grid cols-3" style="margin-bottom:24px;">
-      <div class="card" id="int-type-behavioral" style="cursor:pointer; border-color:var(--cyan-dim);" onclick="selectIntType('behavioral')">
-        <div style="font-size:1.5rem;margin-bottom:8px;">💬</div>
-        <h3>Behavioral</h3>
-        <p style="color:var(--muted);font-size:13px;">STAR method, leadership, conflict, teamwork questions.</p>
+
+    <!-- Locked until the roadmap is complete -->
+    <div id="interview-lock" style="display:none;"></div>
+
+    <div id="interview-body">
+      <div class="grid cols-3" style="margin-bottom:24px;">
+        <div class="card" id="int-type-behavioral" style="cursor:pointer; border-color:var(--cyan-dim);" onclick="selectIntType('behavioral')">
+          <div style="font-size:1.5rem;margin-bottom:8px;">💬</div>
+          <h3>Behavioral</h3>
+          <p style="color:var(--muted);font-size:13px;">STAR method, leadership, conflict, teamwork questions.</p>
+        </div>
+        <div class="card" id="int-type-technical" style="cursor:pointer;" onclick="selectIntType('technical')">
+          <div style="font-size:1.5rem;margin-bottom:8px;">💻</div>
+          <h3>Technical</h3>
+          <p style="color:var(--muted);font-size:13px;">Coding patterns, system design, architecture tradeoffs.</p>
+        </div>
+        <div class="card" id="int-type-mixed" style="cursor:pointer;" onclick="selectIntType('mixed')">
+          <div style="font-size:1.5rem;margin-bottom:8px;">⚡</div>
+          <h3>Full Loop</h3>
+          <p style="color:var(--muted);font-size:13px;">Mixed behavioral + technical, simulates a real loop.</p>
+        </div>
       </div>
-      <div class="card" id="int-type-technical" style="cursor:pointer;" onclick="selectIntType('technical')">
-        <div style="font-size:1.5rem;margin-bottom:8px;">💻</div>
-        <h3>Technical</h3>
-        <p style="color:var(--muted);font-size:13px;">Coding patterns, system design, architecture tradeoffs.</p>
+      <div class="row" style="margin-bottom:20px;">
+        <button class="btn" id="start-interview-btn" onclick="startInterview()">▶ Start interview</button>
+        <button class="btn ghost sm" id="end-interview-btn" onclick="endInterview()" style="display:none;">End & get debrief</button>
       </div>
-      <div class="card" id="int-type-mixed" style="cursor:pointer;" onclick="selectIntType('mixed')">
-        <div style="font-size:1.5rem;margin-bottom:8px;">⚡</div>
-        <h3>Full Loop</h3>
-        <p style="color:var(--muted);font-size:13px;">Mixed behavioral + technical, simulates a real loop.</p>
+      <div id="interview-loading"></div>
+      <div id="interview-log" class="interview-log" style="margin-bottom:14px;"></div>
+      <div id="interview-input-area" style="display:none;">
+        <label class="field"><span>Your answer</span>
+          <textarea id="interview-answer" style="min-height:100px;" placeholder="Answer the question above. Be specific — use real examples."></textarea>
+        </label>
+        <div class="row"><button class="btn" id="submit-answer-btn" onclick="submitAnswer()">Submit answer →</button></div>
       </div>
+      <div id="interview-debrief"></div>
     </div>
-    <div class="row" style="margin-bottom:20px;">
-      <button class="btn" id="start-interview-btn" onclick="startInterview()">▶ Start interview</button>
-      <button class="btn ghost sm" id="end-interview-btn" onclick="endInterview()" style="display:none;">End & get debrief</button>
-    </div>
-    <div id="interview-loading"></div>
-    <div id="interview-log" class="interview-log" style="margin-bottom:14px;"></div>
-    <div id="interview-input-area" style="display:none;">
-      <label class="field"><span>Your answer</span>
-        <textarea id="interview-answer" style="min-height:100px;" placeholder="Answer the question above. Be specific — use real examples."></textarea>
-      </label>
-      <div class="row"><button class="btn" id="submit-answer-btn" onclick="submitAnswer()">Submit answer →</button></div>
-    </div>
-    <div id="interview-debrief"></div>
   </section>
 
   <!-- TAB 5: DAILY COACH -->
@@ -799,6 +810,8 @@ const store = {
   set proofs(v)   { localStorage.setItem('cc_proofs',    JSON.stringify(v)); },
   get checkins()  { return JSON.parse(localStorage.getItem('cc_checkins')  || '[]'); },
   set checkins(v) { localStorage.setItem('cc_checkins',  JSON.stringify(v)); },
+  get dirty()     { return localStorage.getItem('cc_dirty') === '1'; },
+  set dirty(v)    { localStorage.setItem('cc_dirty', v ? '1' : '0'); },
   get key()       { return localStorage.getItem('cc_key')   || ''; },
   set key(v)      { localStorage.setItem('cc_key', v); },
   get model()     { return localStorage.getItem('cc_model') || 'gemini-2.5-flash'; },
@@ -849,8 +862,9 @@ document.querySelectorAll('.tab').forEach(t => {
     t.classList.add('active');
     document.getElementById('panel-' + t.dataset.tab).classList.add('active');
     if (t.dataset.tab === 'coach') { document.getElementById('coach-badge').style.display = 'none'; renderCheckinHistory(); }
-    if (t.dataset.tab === 'roadmap' && store.roadmap) renderRoadmap(store.roadmap, {animate:true});
+    if (t.dataset.tab === 'roadmap') enterRoadmapTab();
     if (t.dataset.tab === 'portfolio') renderProjects();
+    if (t.dataset.tab === 'interview') refreshInterviewLock();
   });
 });
 
@@ -1013,9 +1027,9 @@ function fv(k, v) { if (v != null) document.getElementById(k).value = v; }
 function saveIdentity() {
   const id = { name:val('f-name'), role:val('f-role'), goal:val('f-goal'), skills:val('f-skills'), context:val('f-context'), level:val('f-level'), timeline:val('f-timeline') };
   if (!id.goal.trim()) { toast('Add a dream goal first 🎯'); return; }
-  store.id = id;
+  store.id = id; store.dirty = true;
   const el = document.getElementById('identity-saved'); el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2800);
-  toast('Identity saved ✓');
+  toast(canGenerate() ? 'Identity saved ✓ — roadmap will update' : 'Identity saved ✓');
 }
 const val = id => document.getElementById(id).value;
 
@@ -1054,8 +1068,8 @@ async function finalizeConvo() {
   const history = convMessages.map(m=>`${m.role==='ai'?'Coach':'User'}: ${m.text}`).join('\n\n');
   const prompt = `Based on this career coaching conversation, extract a structured user profile. Infer every field.\n\nConversation:\n${history}\n\nExtract: name, current role, dream goal (specific), current skills (comma-separated), experience level, realistic timeline, context (2-3 sentences on background/motivations/blockers).`;
   try {
-    const profile = await callGemini(prompt, profileSchema); store.id = profile;
-    addConvMsg('ai', `Perfect — profile built!\n\n🎯 Goal: ${profile.goal}\n💼 Level: ${profile.level}\n⏱ Timeline: ${profile.timeline}\n\nHead to the Roadmap tab for your personalized plan.`);
+    const profile = await callGemini(prompt, profileSchema); store.id = profile; store.dirty = true;
+    addConvMsg('ai', `Perfect — profile built!\n\n🎯 Goal: ${profile.goal}\n💼 Level: ${profile.level}\n⏱ Timeline: ${profile.timeline}\n\nHead to the Roadmap tab — your personalized plan builds automatically.`);
     toast('Profile built ✓');
     fv('f-name',profile.name); fv('f-role',profile.role); fv('f-goal',profile.goal); fv('f-skills',profile.skills); fv('f-context',profile.context);
     if (profile.level) document.getElementById('f-level').value = profile.level;
@@ -1072,16 +1086,41 @@ const roadmapSchema = { type:'object', properties:{ summary:{type:'string'}, rea
 
 async function generateRoadmap() {
   if (!store.id) { toast('Fill in your identity first'); switchTo('identity'); return; }
-  setBusy('gen-roadmap-btn', true);
+  if (!canGenerate()) { openKeyModal(); return; }
+  setBusy('regen-roadmap-btn', true);
   document.getElementById('roadmap-loading').innerHTML = loadingHTML('Analyzing your gap and building milestones…');
   const rc = document.getElementById('roadmap-content'); rc.className=''; rc.innerHTML = roadmapSkeleton();
   const prompt = `You are an elite career coach. Design a GAMIFIED, level-based career roadmap (RPG skill tree) toward this person's dream goal.\n\n${identitySummary()}\n\nScoring must be REALISTIC and CALIBRATED — not demoralizing. Use this scale for BOTH "readiness" and every radar "score":\n  • 0-15  = essentially no foundation in this area\n  • 16-35 = beginner with real fundamentals started\n  • 36-55 = developing / intermediate, can do guided work\n  • 56-75 = competitive, independently capable\n  • 76-90 = strong, near job-ready\n  • 91-100 = expert / fully ready now\nGive credit for existing skills, education, and dedicated time. A motivated student with foundational skills and a multi-month runway toward an ambitious goal should typically land in the 20-40 readiness range, NOT single digits. Reserve sub-15 scores only for someone with truly zero relevant background. Vary the 6 radar scores realistically (some higher, some lower) — avoid clustering them all at the bottom.\n\nReturn:\n- "summary": 1-2 sentence honest but encouraging assessment.\n- "readiness": integer 0-100, calibrated per the scale above.\n- "strengths": 3-5 concrete current strengths.\n- "gaps": 3-6 specific missing skills.\n- "radar": EXACTLY 6 core competency axes that matter most for this specific goal (e.g. for a SWE: "DSA & Algorithms", "System Design", "Coding Fluency", "Communication", "Projects/Portfolio", "Domain Knowledge"). Each has a short "axis" label (2-3 words) and an integer "score" 0-100 calibrated per the scale above. Spread the scores realistically.\n- "levels": 5-7 sequential levels easiest→hardest. Each: tier (evocative; FINAL=achieving goal), timeframe, focus (1-2 sentences), skills (2-4), tasks (3-5 verifiable with xp 100-500).\nBe specific. Tasks must be verifiable — candidates must show proof.`;
   try {
     const data = await callGemini(prompt, roadmapSchema);
-    store.roadmap = data; store.progress = []; store.proofs = {};
+    store.roadmap = data; store.progress = []; store.proofs = {}; store.dirty = false;
     renderRoadmap(data, {animate:true}); toast('Roadmap generated ✦');
   } catch(e) { document.getElementById('roadmap-content').innerHTML=`<div class="alert">${esc(e.message)}</div>`; }
-  finally { document.getElementById('roadmap-loading').innerHTML=''; setBusy('gen-roadmap-btn',false); }
+  finally { document.getElementById('roadmap-loading').innerHTML=''; setBusy('regen-roadmap-btn',false); }
+}
+
+/* Can we call Gemini right now? (server key in proxy mode, or a browser key otherwise) */
+function canGenerate() { return PROXY_MODE ? proxyKeyConfigured : !!store.key; }
+
+/* Decide what to show when the Roadmap tab opens — auto-generates instead of a button */
+function enterRoadmapTab() {
+  if (!store.id) { roadmapNotice('identity'); return; }
+  if (!canGenerate()) {
+    if (store.roadmap) renderRoadmap(store.roadmap, {animate:true});
+    else roadmapNotice('key');
+    return;
+  }
+  if (!store.roadmap || store.dirty) generateRoadmap();
+  else renderRoadmap(store.roadmap, {animate:true});
+}
+
+function roadmapNotice(kind) {
+  document.getElementById('regen-roadmap-btn').style.display = 'none';
+  const el = document.getElementById('roadmap-content'); el.className = '';
+  const cfg = kind === 'identity'
+    ? { emoji:'🧭', title:'Tell us about you first', body:'Add your goal and background in the Identity tab — your roadmap builds itself from it, automatically.', cta:'Go to Identity →', fn:"switchTo('identity')" }
+    : { emoji:'🔌', title:'Connect Gemini to begin', body:'Your roadmap generates automatically once Gemini is connected. Paste a free API key to get started.', cta:'Connect Gemini →', fn:'openKeyModal()' };
+  el.innerHTML = `<div class="card hl lock-screen" style="text-align:center;padding:44px 28px;"><div class="lock-emoji">${cfg.emoji}</div><h3 style="font-family:'Inter Tight',sans-serif;font-size:22px;margin:14px 0 8px;letter-spacing:-0.02em;">${cfg.title}</h3><p style="color:var(--muted);font-size:14.5px;max-width:440px;margin:0 auto 22px;line-height:1.6;">${cfg.body}</p><div class="row" style="justify-content:center;"><button class="btn" onclick="${cfg.fn}">${cfg.cta}</button></div></div>`;
 }
 
 function taskKey(li, ti) { return li+'-'+ti; }
@@ -1137,10 +1176,17 @@ async function submitProof() {
     const p=store.progress; if(!p.includes(verifiedKey))p.push(verifiedKey); store.progress=p;
     const newActive=activeLevelIndex(store.roadmap.levels);
     const leveledUp = newActive!==prevActive && prevActive!==-1;
+    const justUnlockedInterview = newActive===-1 && prevActive!==-1;
     setTimeout(()=>{
       closeProofModal();
       renderRoadmap(store.roadmap, {celebrateKey:verifiedKey, celebrateLevel: leveledUp?prevActive:null});
-      toast(leveledUp ? `⚡ Level up — ${store.roadmap.levels[prevActive].tier}!` : `Task verified — ${fb.score}/100 ✦`);
+      if(justUnlockedInterview){
+        toast('🔓 Roadmap complete — Interview Simulator unlocked!');
+        const tab=document.querySelector('.tab[data-tab="interview"]');
+        if(tab) confettiBurst(tab);
+      } else {
+        toast(leveledUp ? `⚡ Level up — ${store.roadmap.levels[prevActive].tier}!` : `Task verified — ${fb.score}/100 ✦`);
+      }
     },2800);
   } catch(e) { document.getElementById('proof-feedback').innerHTML=`<div class="alert">${esc(e.message)}</div>`; document.getElementById('proof-actions').style.display='flex'; }
   finally { document.getElementById('proof-loading').innerHTML=''; }
@@ -1217,17 +1263,18 @@ function renderRoadmap(d, opts={}) {
     const badge = el.querySelector(`.level[data-li="${opts.celebrateLevel}"] .level-badge`);
     if (badge) { badge.classList.add('celebrate'); confettiBurst(badge); }
   }
+  refreshInterviewLock();
 }
 
 /* PORTFOLIO */
 function addProject() {
   const title=val('p-title').trim(); if(!title){toast('Add a project title');return;}
   const p={id:Date.now(),title,link:val('p-link').trim(),desc:val('p-desc').trim(),tags:val('p-tags').split(',').map(s=>s.trim()).filter(Boolean)};
-  const list=store.projects; list.unshift(p); store.projects=list;
+  const list=store.projects; list.unshift(p); store.projects=list; store.dirty=true;
   ['p-title','p-link','p-desc','p-tags'].forEach(i=>document.getElementById(i).value='');
   renderProjects(); toast('Project added');
 }
-function deleteProject(id) { store.projects=store.projects.filter(p=>p.id!==id); renderProjects(); }
+function deleteProject(id) { store.projects=store.projects.filter(p=>p.id!==id); store.dirty=true; renderProjects(); }
 function renderProjects() {
   const list=store.projects, el=document.getElementById('projects-list');
   if(!list.length){el.innerHTML=`<div class="empty" style="grid-column:1/-1;"><div class="big">🗂️</div>No projects yet.</div>`;return;}
@@ -1271,8 +1318,53 @@ async function getFeedback() {
 
 /* INTERVIEW */
 let selectedIntType='behavioral', interviewHistory=[], questionCount=0;
+/* Interview is unlocked only after the whole roadmap is completed */
+function interviewUnlocked() {
+  const r = store.roadmap;
+  return !!(r && r.levels && r.levels.length && activeLevelIndex(r.levels) === -1);
+}
+function refreshInterviewLock() {
+  const unlocked = interviewUnlocked();
+  document.getElementById('interview-lock-icon').style.display = unlocked ? 'none' : '';
+  document.getElementById('interview-body').style.display = unlocked ? 'block' : 'none';
+  const lock = document.getElementById('interview-lock');
+  lock.style.display = unlocked ? 'none' : 'block';
+  if (unlocked) { lock.innerHTML = ''; return; }
+
+  const r = store.roadmap;
+  let done = 0, total = 0, pct = 0;
+  if (r && r.levels) {
+    total = r.levels.length;
+    done = r.levels.filter((l,i)=>levelStats(l,i).complete).length;
+    pct = total ? Math.round(done/total*100) : 0;
+  }
+  const hasRoadmap = !!(r && r.levels && r.levels.length);
+  lock.innerHTML = `
+    <div class="card hl lock-screen" style="text-align:center;padding:44px 28px;">
+      <div class="lock-emoji">🔒</div>
+      <h3 style="font-family:'Inter Tight',sans-serif;font-size:22px;margin:14px 0 8px;letter-spacing:-0.02em;">Interview simulator is locked</h3>
+      <p style="color:var(--muted);font-size:14.5px;max-width:440px;margin:0 auto 22px;line-height:1.6;">
+        ${hasRoadmap
+          ? 'Earn your shot at the real thing. Complete every level of your roadmap to unlock mock interviews with brutally honest feedback.'
+          : 'Generate your roadmap first, then complete all of its levels to unlock mock interviews with brutally honest feedback.'}
+      </p>
+      ${hasRoadmap ? `
+        <div style="max-width:360px;margin:0 auto 8px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:7px;">
+            <span class="mono" style="color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Roadmap progress</span>
+            <span class="mono" style="color:var(--accent);font-weight:700;">${done}/${total} levels</span>
+          </div>
+          <div class="xp-track"><div class="xp-fill" style="width:${pct}%"></div></div>
+        </div>` : ''}
+      <div class="row" style="justify-content:center;margin-top:22px;">
+        <button class="btn" onclick="switchTo('roadmap')">${hasRoadmap ? 'Back to roadmap →' : 'Build my roadmap →'}</button>
+      </div>
+    </div>`;
+}
+
 function selectIntType(type) { selectedIntType=type; ['behavioral','technical','mixed'].forEach(t=>document.getElementById('int-type-'+t).style.borderColor=t===type?'var(--cyan-dim)':'var(--border)'); }
 async function startInterview() {
+  if(!interviewUnlocked()){toast('Complete your roadmap to unlock interviews 🔒');switchTo('roadmap');return;}
   if(!store.id){toast('Set your identity first');switchTo('identity');return;}
   interviewHistory=[]; questionCount=0;
   document.getElementById('interview-log').innerHTML=''; document.getElementById('interview-debrief').innerHTML='';
@@ -1439,7 +1531,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 /* INIT */
 loadIdentity(); renderProjects(); updateKeyStatus(); initProxyStatus();
 if(store.roadmap) renderRoadmap(store.roadmap, {animate:true});
-renderCheckinHistory(); checkCoachBadge();
+renderCheckinHistory(); checkCoachBadge(); refreshInterviewLock();
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
 document.getElementById('conv-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))sendConvMessage();});
 document.getElementById('interview-answer').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))submitAnswer();});
