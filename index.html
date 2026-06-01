@@ -953,22 +953,52 @@ function parseModelText(text, schema) {
   return text;
 }
 
-async function callGemini(prompt, schema) {
+const _sleep = ms => new Promise(r => setTimeout(r, ms));
+// A 503 "model overloaded / high demand" or 429 is transient — worth retrying.
+function isTransientOverload(status, msg){
+  if (status === 503 || status === 429) return true;
+  return /overload|high demand|temporarily|try again later|unavailable|rate limit/i.test(msg || '');
+}
+
+// One raw call against a specific model. Throws an Error with .status set.
+async function callGeminiOnce(prompt, schema, model) {
   if (useProxy) {
-    const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, schema, model: store.model }) });
+    const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, schema, model }) });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
+    if (!res.ok) { const e = new Error(data.error || `Server error (${res.status})`); e.status = res.status; throw e; }
     return parseModelText(data.text, schema);
   }
   const key = store.key;
   if (!key) { openKeyModal(); throw new Error('No API key. Connect Gemini first.'); }
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${store.model}:generateContent?key=${encodeURIComponent(key)}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
   const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 } };
   if (schema) { body.generationConfig.responseMimeType = 'application/json'; body.generationConfig.responseSchema = schema; }
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!res.ok) { let msg = `Gemini API error (${res.status})`; try { const e = await res.json(); msg = e.error?.message || msg; } catch {} throw new Error(msg); }
+  if (!res.ok) { let msg = `Gemini API error (${res.status})`; try { const e = await res.json(); msg = e.error?.message || msg; } catch {} const err = new Error(msg); err.status = res.status; throw err; }
   const data = await res.json();
   return parseModelText(data.candidates?.[0]?.content?.parts?.[0]?.text || '', schema);
+}
+
+// Resilient wrapper: retry the primary model on transient overload (with backoff),
+// then fall back to a lighter model. This is what fixes the "high demand" errors.
+async function callGemini(prompt, schema) {
+  const primary = store.model || 'gemini-2.5-flash';
+  const fallback = primary.includes('2.0') ? null : 'gemini-2.0-flash';
+  const chain = [primary, fallback].filter(Boolean);
+  let lastErr;
+  for (let mi = 0; mi < chain.length; mi++) {
+    const tries = mi === 0 ? 3 : 2;
+    for (let a = 0; a < tries; a++) {
+      try { return await callGeminiOnce(prompt, schema, chain[mi]); }
+      catch (e) {
+        lastErr = e;
+        const canRetry = a < tries - 1 || mi < chain.length - 1;
+        if (isTransientOverload(e.status, e.message) && canRetry) { await _sleep(700 * Math.pow(2, a) + Math.random() * 300); continue; }
+        throw e;
+      }
+    }
+  }
+  throw lastErr;
 }
 
 function identitySummary() {
