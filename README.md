@@ -17,7 +17,7 @@ a gamified XP/level system, an evolving character, a rival bracket, and unlockab
 Just open `index.html` in a browser. Click **Connect Gemini** and paste a key from
 [aistudio.google.com/apikey](https://aistudio.google.com/apikey). Fine for solo demos.
 
-### B. Recommended — server proxy, key stays server-side
+### B. Local proxy — key stays server-side
 The Gemini key never reaches the browser.
 
 ```bash
@@ -32,6 +32,29 @@ node server.js
 
 Then open <http://localhost:3000>. The client auto-detects it's behind the proxy and
 routes all AI calls through `POST /api/gemini`, which injects the key server-side.
+
+### C. Hosted with a hidden key (one shared key for all visitors)
+Deploy the proxy so the key lives in a server env var — never in the repo or the browser,
+and no visitor needs their own key. A real key **cannot** be hidden on GitHub Pages (static
+files are public), so use a Node host instead:
+
+**Render (free):**
+1. Push this repo to GitHub (done).
+2. [render.com](https://render.com) → **New → Blueprint** → pick this repo (it reads `render.yaml`).
+3. When prompted, paste your Gemini key into **`GEMINI_API_KEY`** (stored as a secret).
+4. Deploy → open the `…onrender.com` URL. The app detects the server key and runs with no
+   per-user setup.
+
+**Railway (free):** New Project → Deploy from GitHub → add a `GEMINI_API_KEY` variable → it runs
+`npm start` (the included `Procfile`/`package.json`).
+
+The client probes `/api/status`; if the server reports a configured key it routes everything
+through `/api/gemini` and hides the **Connect Gemini** button. If the server has *no* key, it
+safely falls back to bring-your-own-key mode.
+
+> Note: image/PDF uploads (resume parsing, proof-of-work files) use Gemini's multimodal API
+> directly and still need a browser key. Core text features (roadmap, challenges, interviews,
+> coaching, mentors) run fully through the hidden-key proxy.
 
 ## How it works
 - `index.html` — the whole app (UI + logic). State persists in `localStorage`.

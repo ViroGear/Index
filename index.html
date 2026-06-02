@@ -1789,9 +1789,11 @@ async function detectProxy(){
     const res = await fetch('/api/status', { cache:'no-store' });
     if(res.ok){
       const s = await res.json();
-      if(s && s.proxy){
+      // Only use the proxy when it actually holds a key — otherwise fall back to
+      // direct (bring-your-own-key) so the app still works if the proxy is misconfigured.
+      if(s && s.proxy && s.keyConfigured){
         useProxy = true;
-        proxyKeyConfigured = !!s.keyConfigured;
+        proxyKeyConfigured = true;
         if(s.model) store.model = s.model;
         const btn=document.querySelector('.key-btn'); btn.setAttribute('onclick',''); btn.style.cursor='default';
       }

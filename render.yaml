@@ -1,0 +1,16 @@
+# Render Blueprint — deploys the key-hidden proxy that serves the app.
+# 1) Push this repo to GitHub (done).
+# 2) On render.com → New → Blueprint → pick this repo.
+# 3) When prompted, paste your Gemini API key into GEMINI_API_KEY (kept secret).
+services:
+  - type: web
+    name: career-copilot
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false          # set in the Render dashboard — never committed
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash

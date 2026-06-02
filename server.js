@@ -85,6 +85,12 @@ async function handleGemini(req, res) {
 }
 
 const server = http.createServer((req, res) => {
+  // CORS — allows hosting the static front-end on a different origin if desired.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
   if (req.method === 'POST' && req.url === '/api/gemini') {
     return handleGemini(req, res);
   }
