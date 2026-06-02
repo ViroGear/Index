@@ -599,6 +599,37 @@
   .side-user button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11.5px; font-family: inherit; flex-shrink: 0; }
   .side-user button:hover { color: var(--accent); }
 
+  /* ===== Onboarding poll ===== */
+  body.onboarding #onboard-screen { display: grid; }
+  #onboard-screen { display: none; position: fixed; inset: 0; z-index: 460; place-items: start center; padding: 40px 24px; overflow: auto;
+    background: radial-gradient(900px 500px at 80% -10%, rgba(37,99,235,0.08), transparent 60%), var(--bg); }
+  .onb-wrap { width: 100%; max-width: 620px; }
+  .onb-brand { display: flex; align-items: center; justify-content: center; gap: 11px; margin-bottom: 24px; }
+  .onb-brand .ab-name { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
+  .onb-stepper { display: flex; align-items: flex-start; justify-content: center; margin-bottom: 22px; }
+  .onb-step { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .onb-node { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--border-2); display: grid; place-items: center;
+    font-weight: 700; font-size: 13px; color: var(--faint); background: var(--card); font-family: ui-monospace, monospace; transition: .2s; }
+  .onb-step.active .onb-node { border-color: var(--accent); color: var(--accent); box-shadow: var(--ring); }
+  .onb-step.done .onb-node { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .onb-step .onb-lbl { font-size: 11px; color: var(--muted); }
+  .onb-step.active .onb-lbl { color: var(--accent-dim); font-weight: 600; }
+  .onb-line { width: 38px; height: 2px; background: var(--border-2); margin: 16px 4px 0; transition: .2s; }
+  .onb-line.done { background: var(--accent); }
+  .onb-card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 32px; box-shadow: var(--shadow-lg); animation: rise .35s var(--ease-out) both; }
+  .onb-card h2 { font-family: 'Inter Tight', sans-serif; font-size: 25px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+  .onb-q-sub { color: var(--muted); font-size: 14px; margin: 7px 0 20px; line-height: 1.55; }
+  .onb-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .onb-chip { background: var(--card); border: 1px solid var(--border-2); border-radius: 9px; padding: 9px 14px; font-size: 13px;
+    cursor: pointer; font-family: inherit; color: var(--text); transition: .15s; }
+  .onb-chip:hover { border-color: var(--accent); color: var(--accent-dim); background: var(--accent-soft); }
+  .onb-chip.sel { border-color: var(--accent); color: var(--accent-dim); background: var(--accent-soft); font-weight: 600; }
+  .onb-actions { display: flex; align-items: center; gap: 12px; margin-top: 26px; }
+  .onb-err { color: #B91C1C; font-size: 13px; flex: 1; }
+  .onb-skip { background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; font-family: inherit; }
+  .onb-skip:hover { color: var(--accent); }
+  @media (max-width: 560px){ .onb-line { width: 14px; } .onb-step .onb-lbl { font-size: 10px; } }
+
   .main { flex: 1; margin-left: 250px; min-width: 0; }
   .main > .wrap { padding-top: 32px; }
 
@@ -646,6 +677,18 @@
       <button class="btn" type="submit" id="auth-submit">Sign In →</button>
     </form>
     <div class="auth-foot" id="auth-foot">Don't have an account? <a onclick="toggleAuthMode()">Get started free</a></div>
+  </div>
+</div>
+
+<!-- ONBOARDING POLL -->
+<div id="onboard-screen">
+  <div class="onb-wrap">
+    <div class="onb-brand">
+      <div class="logo-mark">C</div>
+      <div class="ab-name">Career Copilot</div>
+    </div>
+    <div class="onb-stepper" id="onb-stepper"></div>
+    <div class="onb-card" id="onb-card"></div>
   </div>
 </div>
 
@@ -1855,6 +1898,7 @@ function enterApp(email, isNew){
   document.getElementById('auth-pass').value = '';
   updatePlayerChip();
   toast(isNew ? 'Welcome to Career Copilot 🎉' : 'Welcome back ✓');
+  if(isNew || (!store.id && !localStorage.getItem('cc_onboarded'))) startOnboarding();
 }
 function signOut(){
   localStorage.removeItem('cc_session');
@@ -1867,8 +1911,89 @@ function initAuth(){
   const s = localStorage.getItem('cc_session');
   const accs = accountsStore.get();
   setAuthMode('signin');
-  if(s && accs[s]){ document.getElementById('user-email').textContent = s; document.body.classList.add('authed'); }
-  else { document.body.classList.remove('authed'); }
+  if(s && accs[s]){
+    document.getElementById('user-email').textContent = s; document.body.classList.add('authed');
+    if(!store.id && !localStorage.getItem('cc_onboarded')) startOnboarding();
+  } else { document.body.classList.remove('authed'); }
+}
+
+/* ============================================================
+   ONBOARDING POLL (new users) — builds the identity, then the roadmap
+   ============================================================ */
+const ONB_STEPS = [
+  { key:'goal', label:'Goal', q:"What's your dream career goal?",
+    sub:'Be specific. The more detail you give, the better your personalized roadmap will be.',
+    type:'text', placeholder:'e.g. Become a software engineer at a top company',
+    chips:['Tech & Software','Business & Startup','Creative & Media','Science & Research','Health & Medicine','Sports & Performance','Money & Finance','A skilled trade'] },
+  { key:'role', label:'Life', q:'Where are you in life right now?',
+    sub:'Your current situation — school, a job, or between things. A rough answer is fine.',
+    type:'text', placeholder:'e.g. 2nd-year university student',
+    chips:['High-school student','University student','Recent graduate','Working full-time','Switching careers','Taking a break'] },
+  { key:'skills', label:'Enjoy', q:'What do you enjoy or what are you good at?',
+    sub:'Skills, subjects, or activities you like — even rough ones count.',
+    type:'textarea', placeholder:'e.g. problem-solving, writing, working with people, math', chips:[] },
+  { key:'timeline', label:'Time', q:'How much time do you have?',
+    sub:'Your target window to reach the goal.',
+    type:'choice', options:['3 months','6 months','12 months','18 months','2 years','3 years','5 years'] },
+  { key:'level', label:'Level', q:"What's your experience level?",
+    sub:'Roughly where are you with the skills this goal needs?',
+    type:'choice', options:['Complete beginner','Some experience','Intermediate','Advanced'] },
+];
+let onb = {}, onbStep = 0;
+function startOnboarding(){ onb = {}; onbStep = 0; document.body.classList.add('onboarding'); renderOnboard(); }
+function skipOnboarding(){ localStorage.setItem('cc_onboarded','1'); document.body.classList.remove('onboarding'); }
+function renderOnboard(){
+  document.getElementById('onb-stepper').innerHTML = ONB_STEPS.map((s,i)=>{
+    const cls = i<onbStep?'done':i===onbStep?'active':'';
+    const node = `<div class="onb-step ${cls}"><div class="onb-node">${i<onbStep?'✓':(i+1)}</div><div class="onb-lbl">${s.label}</div></div>`;
+    return node + (i<ONB_STEPS.length-1 ? `<div class="onb-line ${i<onbStep?'done':''}"></div>` : '');
+  }).join('');
+  const s = ONB_STEPS[onbStep];
+  let body;
+  if(s.type==='choice'){
+    body = `<div class="onb-chips">${s.options.map(o=>`<button class="onb-chip ${onb[s.key]===o?'sel':''}" onclick="onbChoose('${s.key}',this.textContent)">${o}</button>`).join('')}</div>`;
+  } else {
+    const val = onb[s.key]||'';
+    const input = s.type==='textarea'
+      ? `<textarea id="onb-input" style="min-height:90px;" placeholder="${esc(s.placeholder)}" oninput="onb['${s.key}']=this.value">${esc(val)}</textarea>`
+      : `<input id="onb-input" type="text" placeholder="${esc(s.placeholder)}" value="${esc(val)}" oninput="onb['${s.key}']=this.value" onkeydown="if(event.key==='Enter'){event.preventDefault();onbNext();}" />`;
+    const chips = (s.chips&&s.chips.length)?`<div class="onb-chips">${s.chips.map(c=>`<button class="onb-chip" onclick="onbFill('${s.key}',this.textContent)">${esc(c)}</button>`).join('')}</div>`:'';
+    body = input + chips;
+  }
+  const back = onbStep>0 ? `<button class="btn ghost sm" onclick="onbBack()">← Back</button>` : `<button class="onb-skip" onclick="skipOnboarding()">Skip for now</button>`;
+  const next = onbStep===ONB_STEPS.length-1 ? 'Build my roadmap →' : 'Continue →';
+  document.getElementById('onb-card').innerHTML =
+    `<h2>${esc(s.q)}</h2><p class="onb-q-sub">${esc(s.sub)}</p>${body}<div class="onb-actions">${back}<span class="onb-err" id="onb-err"></span><button class="btn" onclick="onbNext()">${next}</button></div>`;
+  const inp = document.getElementById('onb-input'); if(inp) setTimeout(()=>inp.focus(),60);
+}
+function onbFill(key,val){ onb[key]=val; const inp=document.getElementById('onb-input'); if(inp){ inp.value=val; inp.focus(); } }
+function onbChoose(key,val){ onb[key]=val; renderOnboard(); }
+function onbBack(){ if(onbStep>0){ onbStep--; renderOnboard(); } }
+function onbNext(){
+  const s = ONB_STEPS[onbStep], err = document.getElementById('onb-err');
+  const v = (onb[s.key]||'').trim ? (onb[s.key]||'').trim() : onb[s.key];
+  if(s.type!=='choice' && (!v || !v.length)){ if(err) err.textContent='Please fill this in to continue.'; return; }
+  if(s.type==='choice' && !onb[s.key]){ if(err) err.textContent='Pick one to continue.'; return; }
+  if(onbStep<ONB_STEPS.length-1){ onbStep++; renderOnboard(); } else finishOnboarding();
+}
+function finishOnboarding(){
+  const email = localStorage.getItem('cc_session')||'';
+  const name = (email.split('@')[0]||'').replace(/[._\-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  store.id = {
+    name,
+    role: (onb.role||'').trim(),
+    goal: (onb.goal||'').trim(),
+    skills: (onb.skills||'').trim(),
+    context: [onb.role?`Currently: ${onb.role}.`:'', onb.skills?`Enjoys / good at: ${onb.skills}.`:''].filter(Boolean).join(' '),
+    level: onb.level||'Intermediate',
+    timeline: onb.timeline||'12 months'
+  };
+  store.dirty = true;
+  localStorage.setItem('cc_onboarded','1');
+  loadIdentity();
+  document.body.classList.remove('onboarding');
+  toast('Profile ready — building your roadmap ✦');
+  switchTo('roadmap');
 }
 
 /* ============================================================
