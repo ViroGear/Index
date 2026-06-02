@@ -607,7 +607,10 @@
   .onb-brand { display: flex; align-items: center; justify-content: center; gap: 11px; margin-bottom: 24px; }
   .onb-brand .ab-name { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
   .onb-stepper { display: flex; align-items: flex-start; justify-content: center; margin-bottom: 22px; }
-  .onb-step { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .onb-step { display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer; }
+  .onb-step:hover .onb-node { border-color: var(--accent); color: var(--accent); }
+  .onb-step.done:hover .onb-node { color: #fff; }
+  .onb-step:hover .onb-lbl { color: var(--accent-dim); }
   .onb-node { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--border-2); display: grid; place-items: center;
     font-weight: 700; font-size: 13px; color: var(--faint); background: var(--card); font-family: ui-monospace, monospace; transition: .2s; }
   .onb-step.active .onb-node { border-color: var(--accent); color: var(--accent); box-shadow: var(--ring); }
@@ -791,6 +794,7 @@
 
       <div class="row" style="margin-top:14px;">
         <button class="btn" onclick="saveIdentity()">Save identity →</button>
+        <button class="btn ghost sm" onclick="startOnboarding(true)">↻ Retake guided setup</button>
         <button class="btn ghost sm" onclick="startConvoMode()">✦ Let Gemini interview me instead</button>
         <span class="spacer"></span>
         <span id="identity-saved" class="mono" style="color:var(--green); font-size:12.5px; display:none;">✓ Saved</span>
@@ -1940,13 +1944,18 @@ const ONB_STEPS = [
     type:'choice', options:['Complete beginner','Some experience','Intermediate','Advanced'] },
 ];
 let onb = {}, onbStep = 0;
-function startOnboarding(){ onb = {}; onbStep = 0; document.body.classList.add('onboarding'); renderOnboard(); }
+function startOnboarding(prefill){
+  onb = (prefill && store.id) ? { goal:store.id.goal||'', role:store.id.role||'', skills:store.id.skills||'', timeline:store.id.timeline||'', level:store.id.level||'' } : {};
+  onbStep = 0; document.body.classList.add('onboarding'); renderOnboard();
+}
 function skipOnboarding(){ localStorage.setItem('cc_onboarded','1'); document.body.classList.remove('onboarding'); }
+function onbGoto(i){ if(i>=0 && i<ONB_STEPS.length && i!==onbStep){ onbStep = i; renderOnboard(); } }
+function onbAnswered(s){ const v = onb[s.key]; return s.type==='choice' ? !!v : !!(v && v.trim()); }
 function renderOnboard(){
   document.getElementById('onb-stepper').innerHTML = ONB_STEPS.map((s,i)=>{
-    const cls = i<onbStep?'done':i===onbStep?'active':'';
-    const node = `<div class="onb-step ${cls}"><div class="onb-node">${i<onbStep?'✓':(i+1)}</div><div class="onb-lbl">${s.label}</div></div>`;
-    return node + (i<ONB_STEPS.length-1 ? `<div class="onb-line ${i<onbStep?'done':''}"></div>` : '');
+    const cls = i===onbStep?'active':(onbAnswered(s)?'done':'');
+    const node = `<div class="onb-step ${cls}" onclick="onbGoto(${i})" title="${esc(s.label)}"><div class="onb-node">${(i!==onbStep && onbAnswered(s))?'✓':(i+1)}</div><div class="onb-lbl">${s.label}</div></div>`;
+    return node + (i<ONB_STEPS.length-1 ? `<div class="onb-line ${onbAnswered(s)?'done':''}"></div>` : '');
   }).join('');
   const s = ONB_STEPS[onbStep];
   let body;
@@ -1977,6 +1986,9 @@ function onbNext(){
   if(onbStep<ONB_STEPS.length-1){ onbStep++; renderOnboard(); } else finishOnboarding();
 }
 function finishOnboarding(){
+  // with free navigation, make sure every step got answered
+  const missing = ONB_STEPS.findIndex(s => !onbAnswered(s));
+  if(missing !== -1){ onbStep = missing; renderOnboard(); const err = document.getElementById('onb-err'); if(err) err.textContent = 'Please answer this one too.'; return; }
   const email = localStorage.getItem('cc_session')||'';
   const name = (email.split('@')[0]||'').replace(/[._\-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
   store.id = {
