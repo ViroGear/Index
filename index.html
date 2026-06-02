@@ -576,6 +576,29 @@
   .mentor-lesson { font-size: 13.5px; line-height: 1.7; color: var(--text); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
   .mentor-card.avail .mentor-cta { font-size: 12px; color: var(--accent); font-weight: 600; margin-top: 10px; }
 
+  /* ===== Auth gate ===== */
+  body:not(.authed) .app { display: none; }
+  body.authed #auth-screen { display: none; }
+  #auth-screen { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; padding: 24px; overflow: auto;
+    background: radial-gradient(900px 500px at 80% -10%, rgba(37,99,235,0.08), transparent 60%), var(--bg); }
+  .auth-card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 36px 34px; box-shadow: var(--shadow-lg); animation: rise .5s var(--ease-out) both; }
+  .auth-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 26px; }
+  .auth-brand .ab-name { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
+  .auth-brand .ab-sub { font-size: 9px; color: var(--faint); letter-spacing: 0.09em; text-transform: uppercase; }
+  .auth-card h2 { font-family: 'Inter Tight', sans-serif; font-size: 27px; font-weight: 800; letter-spacing: -0.025em; }
+  .auth-card .auth-sub { color: var(--muted); font-size: 14.5px; line-height: 1.55; margin: 6px 0 24px; }
+  .auth-card .btn { width: 100%; justify-content: center; padding: 13px; margin-top: 4px; font-size: 14.5px; }
+  .auth-error { color: #B91C1C; font-size: 13px; margin-top: 10px; }
+  .auth-foot { text-align: center; margin-top: 20px; font-size: 13.5px; color: var(--muted); }
+  .auth-foot a { color: var(--accent); font-weight: 600; cursor: pointer; }
+  .auth-foot a:hover { text-decoration: underline; }
+  .side-user { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px;
+    color: var(--faint); padding-top: 10px; margin-top: 2px; border-top: 1px solid var(--border); }
+  .side-user .email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .side-user button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11.5px; font-family: inherit; flex-shrink: 0; }
+  .side-user button:hover { color: var(--accent); }
+
   .main { flex: 1; margin-left: 250px; min-width: 0; }
   .main > .wrap { padding-top: 32px; }
 
@@ -603,6 +626,29 @@
 </head>
 <body>
 
+<!-- AUTH GATE -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="logo-mark">C</div>
+      <div><div class="ab-name">Career Copilot</div><div class="ab-sub mono">Idea → Skills → Proof</div></div>
+    </div>
+    <h2 id="auth-title">Welcome back</h2>
+    <p class="auth-sub" id="auth-sub">Continue your career quest. Your progress is waiting.</p>
+    <form id="auth-form" onsubmit="submitAuth(); return false;">
+      <label class="field"><span>Email</span>
+        <input id="auth-email" type="email" name="email" autocomplete="email" placeholder="alex@example.com" />
+      </label>
+      <label class="field"><span>Password</span>
+        <input id="auth-pass" type="password" name="password" autocomplete="current-password" placeholder="Your password" />
+      </label>
+      <div class="auth-error" id="auth-error"></div>
+      <button class="btn" type="submit" id="auth-submit">Sign In →</button>
+    </form>
+    <div class="auth-foot" id="auth-foot">Don't have an account? <a onclick="toggleAuthMode()">Get started free</a></div>
+  </div>
+</div>
+
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <div class="side-brand">
@@ -624,6 +670,7 @@
         <span class="key-dot" id="keyDot"></span>
         <span id="keyLabel">Connect Gemini</span>
       </button>
+      <div class="side-user"><span class="email" id="user-email"></span><button onclick="signOut()">Sign out</button></div>
     </div>
   </aside>
 
@@ -1760,6 +1807,71 @@ let toastT;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
 /* ============================================================
+   AUTH GATE (client-side, demo-grade — accounts live in this browser)
+   ============================================================ */
+const accountsStore = {
+  get(){ return JSON.parse(localStorage.getItem('cc_accounts') || '{}'); },
+  set(v){ localStorage.setItem('cc_accounts', JSON.stringify(v)); }
+};
+async function hashPass(s){
+  try { if(crypto && crypto.subtle){ const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); } } catch {}
+  let h = 5381; for(let i=0;i<s.length;i++) h = ((h<<5)+h+s.charCodeAt(i))>>>0; return 'f'+h.toString(16); // fallback
+}
+let authMode = 'signin';
+function setAuthMode(m){
+  authMode = m; const up = m === 'signup';
+  document.getElementById('auth-title').textContent = up ? 'Create your account' : 'Welcome back';
+  document.getElementById('auth-sub').textContent = up ? "Start your career quest — it's free and takes a second." : 'Continue your career quest. Your progress is waiting.';
+  document.getElementById('auth-submit').textContent = up ? 'Create account →' : 'Sign In →';
+  document.getElementById('auth-pass').setAttribute('autocomplete', up ? 'new-password' : 'current-password');
+  document.getElementById('auth-foot').innerHTML = up
+    ? 'Already have an account? <a onclick="toggleAuthMode()">Sign in</a>'
+    : "Don't have an account? <a onclick=\"toggleAuthMode()\">Get started free</a>";
+  document.getElementById('auth-error').textContent = '';
+}
+function toggleAuthMode(){ setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); }
+async function submitAuth(){
+  const email = document.getElementById('auth-email').value.trim().toLowerCase();
+  const pass = document.getElementById('auth-pass').value;
+  const err = document.getElementById('auth-error');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent = 'Enter a valid email address.'; return; }
+  if(pass.length < 6){ err.textContent = 'Password must be at least 6 characters.'; return; }
+  const accs = accountsStore.get();
+  const hash = await hashPass(pass);
+  if(authMode === 'signup'){
+    if(accs[email]){ err.textContent = 'An account with this email already exists — sign in instead.'; return; }
+    accs[email] = { hash, createdAt: Date.now() }; accountsStore.set(accs);
+    enterApp(email, true);
+  } else {
+    if(!accs[email]){ err.textContent = 'No account found. Tap “Get started free” to create one.'; return; }
+    if(accs[email].hash !== hash){ err.textContent = 'Incorrect password. Try again.'; return; }
+    enterApp(email, false);
+  }
+}
+function enterApp(email, isNew){
+  localStorage.setItem('cc_session', email);
+  document.getElementById('user-email').textContent = email;
+  document.body.classList.add('authed');
+  document.getElementById('auth-pass').value = '';
+  updatePlayerChip();
+  toast(isNew ? 'Welcome to Career Copilot 🎉' : 'Welcome back ✓');
+}
+function signOut(){
+  localStorage.removeItem('cc_session');
+  document.body.classList.remove('authed');
+  document.getElementById('auth-pass').value = '';
+  setAuthMode('signin');
+  closeSidebar();
+}
+function initAuth(){
+  const s = localStorage.getItem('cc_session');
+  const accs = accountsStore.get();
+  setAuthMode('signin');
+  if(s && accs[s]){ document.getElementById('user-email').textContent = s; document.body.classList.add('authed'); }
+  else { document.body.classList.remove('authed'); }
+}
+
+/* ============================================================
    GAME LAYER — progression, character, rivals, mentor vault
    ============================================================ */
 const RANKS = ['Novice','Apprentice','Journeyman','Adept','Specialist','Veteran','Master','Grandmaster','Luminary','Legend'];
@@ -1969,6 +2081,7 @@ function renderPlayer(){
 }
 
 /* INIT */
+initAuth();
 loadIdentity(); renderProjects(); updateKeyStatus(); detectProxy();
 if(store.roadmap) renderRoadmap(store.roadmap, {animate:true});
 renderCheckinHistory(); checkCoachBadge(); refreshInterviewLock();
