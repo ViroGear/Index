@@ -283,6 +283,27 @@
   .checkin-options { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
   .checkin-opt { background: var(--card); border: 1px solid var(--border-2); color: var(--muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: 0.15s; font-family: inherit; font-weight: 500; }
   .checkin-opt:hover, .checkin-opt.sel { border-color: var(--accent); color: var(--accent-dim); background: var(--accent-soft); }
+  .streak-strip { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+  .streak-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 15px 16px; box-shadow: var(--shadow-sm); }
+  .streak-box .v { font-size: 24px; font-weight: 800; color: var(--accent); line-height: 1; font-family: 'Inter Tight', sans-serif; }
+  .streak-box .l { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 7px; font-family: ui-monospace, monospace; }
+  @media (max-width: 680px) { .streak-strip { grid-template-columns: 1fr; } }
+  .skill-viz { display: grid; gap: 10px; }
+  .skill-viz-scale { display: grid; grid-template-columns: repeat(3, 1fr); color: var(--faint); font-size: 10px; font-family: ui-monospace, monospace; margin: -2px 0 2px; }
+  .skill-viz-scale span:nth-child(2) { text-align: center; }
+  .skill-viz-scale span:nth-child(3) { text-align: right; }
+  .skill-meter { border: 1px solid var(--border); background: var(--card-2); border-radius: 9px; padding: 10px 11px; }
+  .skill-meter-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .skill-meter-name { font-weight: 700; font-size: 13px; line-height: 1.25; }
+  .skill-meter-score { flex: 0 0 auto; min-width: 58px; text-align: center; border-radius: 99px; padding: 3px 8px; font-size: 11px; font-weight: 800; font-family: ui-monospace, monospace; }
+  .skill-track { height: 12px; background: linear-gradient(90deg, #F1F5F9, #F8FAFC); border: 1px solid var(--border); border-radius: 99px; overflow: hidden; position: relative; }
+  .skill-track::before, .skill-track::after { content: ""; position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(107,114,128,0.20); }
+  .skill-track::before { left: 50%; }
+  .skill-track::after { left: 75%; }
+  .skill-fill { height: 100%; border-radius: 99px; min-width: 8px; transition: width .45s ease; }
+  .skill-meter-note { margin-top: 6px; color: var(--faint); font-size: 11.5px; font-family: ui-monospace, monospace; }
+  .identity-insight-grid { display: grid; gap: 22px; grid-template-columns: minmax(280px,1.35fr) minmax(220px,1fr) minmax(220px,1fr); }
+  @media (max-width: 980px) { .identity-insight-grid { grid-template-columns: 1fr; } }
 
   .proof-score { display: inline-flex; align-items: center; gap: 8px; background: var(--green-soft); border: 1px solid rgba(5,150,105,0.25); color: var(--green); padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; margin-bottom: 8px; font-family: ui-monospace, monospace; }
 
@@ -799,6 +820,8 @@
         <span class="spacer"></span>
         <span id="identity-saved" class="mono" style="color:var(--green); font-size:12.5px; display:none;">✓ Saved</span>
       </div>
+
+      <div id="identity-insights" style="margin-top:18px;"></div>
     </div>
   </section>
 
@@ -901,6 +924,7 @@
       <h2>Your <span class="accent">daily</span> coaching loop.</h2>
       <p>Check in every day. Gemini reviews your progress, adapts your roadmap if you're drifting, and gives you one focused priority for today.</p>
     </div>
+    <div id="streak-summary"></div>
     <div id="checkin-form">
       <div class="checkin-card">
         <div class="checkin-q">How are you feeling about your progress right now?</div>
@@ -944,11 +968,11 @@
 <div class="modal-bg" id="proofModal">
   <div class="modal">
     <h3>Submit proof of work</h3>
-    <p>Show what you did for: <strong id="proof-task-label" style="color:var(--text);"></strong>. Gemini grades it like a hiring manager and adds the score to your profile.</p>
+    <p>Show specific, verifiable proof for: <strong id="proof-task-label" style="color:var(--text);"></strong>. Vague claims are rejected and do not earn XP.</p>
     <label class="field"><span>Describe what you did / built</span>
-      <textarea id="proof-input" style="min-height:100px;" placeholder="I built a React todo app with localStorage persistence. Here's what I learned..."></textarea>
+      <textarea id="proof-input" style="min-height:120px;" placeholder="Include what you built, exact deliverables, tools used, what changed, and how someone could verify it. Links, screenshots, or files make approval much more likely."></textarea>
     </label>
-    <label class="field" style="margin-bottom:8px;"><span>Attach evidence (optional)</span></label>
+    <label class="field" style="margin-bottom:8px;"><span>Attach evidence (strongly recommended)</span></label>
     <div class="upload-zone" id="proof-upload-zone"
       ondragover="event.preventDefault(); this.classList.add('drag-over')"
       ondragleave="this.classList.remove('drag-over')"
@@ -1108,7 +1132,7 @@ document.querySelectorAll('.tab').forEach(t => {
     document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
     document.getElementById('panel-' + t.dataset.tab).classList.add('active');
-    if (t.dataset.tab === 'coach') { document.getElementById('coach-badge').style.display = 'none'; renderCheckinHistory(); }
+    if (t.dataset.tab === 'coach') { document.getElementById('coach-badge').style.display = 'none'; renderStreakSummary(); renderCheckinHistory(); }
     if (t.dataset.tab === 'roadmap') enterRoadmapTab();
     if (t.dataset.tab === 'portfolio') renderProjects();
     if (t.dataset.tab === 'interview') refreshInterviewLock();
@@ -1278,16 +1302,77 @@ async function callGeminiMultimodal(textPrompt, file, schema) {
 
 /* IDENTITY */
 function loadIdentity() {
-  const id = store.id; if (!id) return;
+  const id = store.id;
+  renderIdentityInsights();
+  if (!id) return;
   fv('f-name',id.name); fv('f-role',id.role); fv('f-goal',id.goal); fv('f-skills',id.skills); fv('f-context',id.context);
   if (id.level) document.getElementById('f-level').value = id.level;
   if (id.timeline) document.getElementById('f-timeline').value = id.timeline;
 }
 function fv(k, v) { if (v != null) document.getElementById(k).value = v; }
+function skillBand(score) {
+  if (score >= 76) return { label:'Ready', color:'var(--green)', bg:'var(--green-soft)' };
+  if (score >= 56) return { label:'Competitive', color:'var(--accent)', bg:'var(--accent-soft)' };
+  if (score >= 36) return { label:'Building', color:'var(--amber)', bg:'var(--amber-soft)' };
+  return { label:'Focus area', color:'var(--red)', bg:'var(--red-soft)' };
+}
+function renderSkillProfile(radar) {
+  if (!radar || !radar.length) return `<div style="color:var(--faint);font-size:13px;">No skill profile generated yet.</div>`;
+  const rows = [...radar].sort((a,b)=>b.score-a.score).map(d => {
+    const score = Math.max(0, Math.min(100, Number(d.score) || 0));
+    const band = skillBand(score);
+    const width = Math.max(3, score);
+    return `<div class="skill-meter">
+      <div class="skill-meter-top">
+        <div class="skill-meter-name">${esc(d.axis)}</div>
+        <div class="skill-meter-score" style="color:${band.color};background:${band.bg};border:1px solid ${band.color};">${score}</div>
+      </div>
+      <div class="skill-track"><div class="skill-fill" style="width:${width}%;background:${band.color};"></div></div>
+      <div class="skill-meter-note">${band.label}</div>
+    </div>`;
+  }).join('');
+  return `<div class="skill-viz"><div class="skill-viz-scale"><span>0</span><span>50</span><span>100</span></div>${rows}</div>`;
+}
+function renderIdentityInsights() {
+  const el = document.getElementById('identity-insights');
+  if (!el) return;
+  const d = store.roadmap;
+  if (!d) {
+    el.innerHTML = store.id
+      ? `<div class="card hl"><span class="eyebrow">Career signal</span><div class="row" style="margin-top:12px;align-items:flex-start;"><div style="flex:1;min-width:220px;color:var(--muted);font-size:13.5px;line-height:1.7;">Generate your roadmap to add readiness, skill profile, strengths, and gaps directly to this identity profile.</div><button class="btn sm" onclick="switchTo('roadmap')">Build roadmap →</button></div></div>`
+      : '';
+    return;
+  }
+
+  const strengths = (d.strengths || []).map(s => `<div class="gap-item"><span class="ic">▲</span><span>${esc(s)}</span></div>`).join('');
+  const gaps = (d.gaps || []).map(s => `<div class="gap-item"><span class="ic">●</span><span>${esc(s)}</span></div>`).join('');
+  const skillProfile = renderSkillProfile(d.radar);
+  const dirtyNote = store.dirty
+    ? `<div class="alert" style="margin-top:14px;">Identity changed since this analysis. Regenerate the roadmap to refresh readiness, strengths, and gaps.</div>`
+    : '';
+
+  el.innerHTML = `<div class="card hl">
+    <div class="row" style="align-items:flex-start;margin-bottom:16px;">
+      <div style="flex:1;min-width:220px;">
+        <span class="eyebrow">Career signal</span>
+        <h3 style="font-family:'Inter Tight',sans-serif;font-size:21px;letter-spacing:-0.02em;margin:8px 0 6px;">Readiness, skills, strengths, and gaps</h3>
+        <p style="color:var(--muted);font-size:13.5px;line-height:1.65;">${esc(d.summary || '')}</p>
+      </div>
+      <div class="ring" style="--p:${Math.max(0, Math.min(100, d.readiness || 0))};width:92px;height:92px;flex:0 0 auto;"><span><b>${d.readiness || 0}</b><em>%</em></span></div>
+    </div>
+    <div class="identity-insight-grid">
+      <div><h4 style="margin-bottom:10px;">Skill profile</h4>${skillProfile}</div>
+      <div class="gap-col str"><h4>Strengths</h4>${strengths || '<div style="color:var(--faint);font-size:13px;">No strengths yet.</div>'}</div>
+      <div class="gap-col gap"><h4>Gaps to close</h4>${gaps || '<div style="color:var(--faint);font-size:13px;">No gaps yet.</div>'}</div>
+    </div>
+    ${dirtyNote}
+  </div>`;
+}
 function saveIdentity() {
   const id = { name:val('f-name'), role:val('f-role'), goal:val('f-goal'), skills:val('f-skills'), context:val('f-context'), level:val('f-level'), timeline:val('f-timeline') };
   if (!id.goal.trim()) { toast('Add a dream goal first 🎯'); return; }
   store.id = id; store.dirty = true;
+  renderIdentityInsights();
   const el = document.getElementById('identity-saved'); el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2800);
   toast(canGenerate() ? 'Identity saved ✓ — roadmap will update' : 'Identity saved ✓');
 }
@@ -1334,6 +1419,7 @@ async function finalizeConvo() {
     fv('f-name',profile.name); fv('f-role',profile.role); fv('f-goal',profile.goal); fv('f-skills',profile.skills); fv('f-context',profile.context);
     if (profile.level) document.getElementById('f-level').value = profile.level;
     if (profile.timeline) document.getElementById('f-timeline').value = profile.timeline;
+    renderIdentityInsights();
     document.getElementById('conv-send-btn').textContent = 'Go to Roadmap →';
     document.getElementById('conv-send-btn').onclick = () => switchTo('roadmap');
     document.getElementById('conv-send-btn').disabled = false;
@@ -1354,6 +1440,7 @@ async function generateRoadmap() {
   try {
     const data = await callGemini(prompt, roadmapSchema);
     store.roadmap = data; store.progress = []; store.proofs = {}; store.dirty = false;
+    renderIdentityInsights();
     renderRoadmap(data, {animate:true}); toast('Roadmap generated ✦');
   } catch(e) { document.getElementById('roadmap-content').innerHTML=`<div class="alert">${esc(e.message)}</div>`; }
   finally { document.getElementById('roadmap-loading').innerHTML=''; setBusy('regen-roadmap-btn',false); }
@@ -1420,16 +1507,43 @@ function clearProofFile(){
   const info=document.getElementById('proof-file-info'); if(info) info.style.display='none';
 }
 
+function proofQualityIssues(text, file) {
+  const issues = [];
+  const compact = text.toLowerCase().replace(/\s+/g, ' ').trim();
+  const words = compact ? compact.split(' ').filter(Boolean) : [];
+  const vague = ['done', 'finished', 'completed', 'i did it', 'trust me', 'n/a', 'na', 'test', 'asdf', 'nothing'];
+  if (!file && words.length < 35) issues.push('Write at least 35 words or attach evidence.');
+  if (compact && compact.length < 140 && !file) issues.push('Add concrete detail: deliverables, tools, decisions, and verification steps.');
+  if (vague.some(v => compact === v) || (words.length < 12 && vague.some(v => compact.includes(v)))) issues.push('Avoid placeholder or unverifiable claims.');
+  if (/(.)\1{7,}/.test(compact)) issues.push('Remove repeated filler characters.');
+  if (!/(built|created|implemented|solved|designed|wrote|tested|deployed|analyzed|published|submitted|recorded|fixed|refactored|documented|completed)/i.test(text) && !file) {
+    issues.push('Describe the actual work performed, not just the outcome.');
+  }
+  return issues;
+}
+
 async function submitProof() {
   const sol=val('proof-input').trim();
   if(!sol && !proofFile){toast('Describe what you did or attach evidence');return;}
+  const localIssues = proofQualityIssues(sol, proofFile);
+  if (localIssues.length) {
+    document.getElementById('proof-feedback').innerHTML=`<div class="alert"><strong>Proof needs more evidence.</strong><br>${localIssues.map(esc).join('<br>')}</div>`;
+    return;
+  }
   document.getElementById('proof-actions').style.display='none';
   document.getElementById('proof-loading').innerHTML=loadingHTML(proofFile?'Reviewing your evidence…':'Grading like a hiring manager…');
   const proofSchema = { type:'object', properties:{score:{type:'integer'},verdict:{type:'string'},strengths:{type:'array',items:{type:'string'}},improvements:{type:'array',items:{type:'string'}}}, required:['score','verdict','strengths','improvements'] };
   const prompt = `You are a hiring manager evaluating proof of work.\n\nTask: "${pendingProofLabel}"\nCandidate goal: ${store.id?.goal||'N/A'} | Level: ${store.id?.level||'N/A'}\n\nCandidate's description:\n"""${sol||'(none provided — evaluate from the attached evidence)'}"""\n${proofFile?'An evidence file is attached (screenshot, certificate, or document). Examine it carefully as the primary proof.':''}\n\nScore 0-100, 1-sentence verdict, 2-3 strengths, 2-3 improvements. If the evidence does not credibly demonstrate the task, score it low and say why.`;
   try {
-    const fb = proofFile ? await callGeminiMultimodal(prompt, proofFile, proofSchema) : await callGemini(prompt, proofSchema);
-    document.getElementById('proof-feedback').innerHTML=`<div class="proof-score">Score: ${fb.score}/100</div><div style="font-size:13.5px;margin-bottom:10px;font-weight:600;">${esc(fb.verdict)}</div><div style="font-size:12.5px;color:var(--muted);margin-bottom:6px;">✓ ${fb.strengths.join(' · ')}</div><div style="font-size:12.5px;color:var(--faint);">→ ${fb.improvements.join(' · ')}</div>`;
+    const strictProofSchema = { type:'object', properties:{accepted:{type:'boolean'},score:{type:'integer'},confidence:{type:'integer'},verdict:{type:'string'},strengths:{type:'array',items:{type:'string'}},improvements:{type:'array',items:{type:'string'}},requiredEvidence:{type:'string'}}, required:['accepted','score','confidence','verdict','strengths','improvements','requiredEvidence'] };
+    const strictPrompt = `You are a strict hiring manager and anti-cheat reviewer evaluating proof of work. Your job is to prevent fake progress.\n\nTask: "${pendingProofLabel}"\nCandidate goal: ${store.id?.goal||'N/A'} | Level: ${store.id?.level||'N/A'}\n\nCandidate's description:\n"""${sol||'(none provided; evaluate only from the attached evidence)'}"""\n${proofFile?'An evidence file is attached. Examine it carefully as the primary proof.':''}\n\nRules:\n- Accept only if the proof credibly demonstrates THIS exact task, not adjacent effort.\n- Reject vague summaries, unsupported claims, screenshots/documents that do not show the claimed work, or evidence that could be copied without doing the task.\n- If there is no attached file or link-like/verifiable detail, cap score at 69 unless the written proof is unusually specific and self-auditing.\n- If accepted is false, score must be 0-69 and requiredEvidence should say exactly what would prove it.\n- If accepted is true, score should reflect quality, not effort. Passing requires score >= 70.\n\nReturn accepted, score 0-100, confidence 0-100, 1-sentence verdict, 2-3 concrete strengths, 2-3 improvements, and requiredEvidence.`;
+    const fb = proofFile ? await callGeminiMultimodal(strictPrompt, proofFile, strictProofSchema) : await callGemini(strictPrompt, strictProofSchema);
+    const accepted = !!fb.accepted && fb.score >= 70;
+    document.getElementById('proof-feedback').innerHTML=`<div class="proof-score" style="${accepted?'':'background:var(--red-soft);border-color:rgba(220,38,38,0.25);color:var(--red);'}">${accepted?'Verified':'Not verified'} · ${fb.score}/100</div><div style="font-size:13.5px;margin-bottom:10px;font-weight:600;">${esc(fb.verdict)}</div><div style="font-size:12.5px;color:var(--muted);margin-bottom:6px;">✓ ${(fb.strengths||[]).map(esc).join(' · ')}</div><div style="font-size:12.5px;color:var(--faint);">→ ${(fb.improvements||[]).map(esc).join(' · ')}</div>${accepted?'':`<div class="alert" style="margin-top:12px;">To complete this task, add stronger evidence: ${esc(fb.requiredEvidence||'Attach proof that directly shows the completed work.')}</div>`}`;
+    if (!accepted) {
+      document.getElementById('proof-actions').style.display='flex';
+      return;
+    }
     const verifiedKey=pendingProofKey;
     const prevActive=activeLevelIndex(store.roadmap.levels);
     const proofs=store.proofs; proofs[verifiedKey]={sol,score:fb.score,verdict:fb.verdict,ts:Date.now()}; store.proofs=proofs;
@@ -1503,7 +1617,7 @@ function renderRoadmap(d, opts={}) {
   const completedLevels=levels.filter((l,i)=>levelStats(l,i).complete).length;
   const proofCount=Object.keys(store.proofs).length;
 
-  const statsHTML=`<div class="stat-row"><div class="stat-box"><div class="s-val">${d.readiness}%</div><div class="s-lbl">Readiness today</div></div><div class="stat-box"><div class="s-val">${totalEarned.toLocaleString()}</div><div class="s-lbl">XP earned</div></div><div class="stat-box"><div class="s-val">${completedLevels}/${levels.length}</div><div class="s-lbl">Levels complete</div></div><div class="stat-box"><div class="s-val">${proofCount}</div><div class="s-lbl">Tasks with proof</div></div></div>`;
+  const statsHTML=`<div class="stat-row"><div class="stat-box"><div class="s-val">${totalEarned.toLocaleString()}</div><div class="s-lbl">XP earned</div></div><div class="stat-box"><div class="s-val">${grandTotal.toLocaleString()}</div><div class="s-lbl">Total XP path</div></div><div class="stat-box"><div class="s-val">${completedLevels}/${levels.length}</div><div class="s-lbl">Levels complete</div></div><div class="stat-box"><div class="s-val">${proofCount}</div><div class="s-lbl">Tasks with proof</div></div></div>`;
 
   let barHTML;
   if (active===-1) { barHTML=`<div class="xp-bar card hl"><div class="xp-top"><span class="eyebrow">Goal achieved</span><span class="xp-nums">${totalEarned.toLocaleString()} XP · MAX</span></div><div class="xp-track"><div class="xp-fill" style="width:100%"></div></div><div class="xp-next">🏆 All ${levels.length} levels complete</div></div>`; }
@@ -1518,12 +1632,9 @@ function renderRoadmap(d, opts={}) {
     return `<div class="level ${state}" data-li="${li}"><div class="level-badge">${st.complete?'✓':(li+1)}</div><div class="level-body"><div class="level-head"><div><div class="level-meta mono">LEVEL ${li+1} · ${esc(lv.timeframe)}</div><div class="level-tier">${esc(lv.tier)}</div></div><div class="level-xp">${st.earned}/${st.total} XP</div></div><div class="level-focus">${esc(lv.focus)}</div><div class="level-skills">${lv.skills.map(s=>`<span class="tag">${esc(s)}</span>`).join('')}</div><div class="level-progress"><div class="level-progress-fill" style="width:${pct}%"></div></div><ul class="task-list">${tasks}</ul>${state==='locked'?'<div class="lock-note">🔒 Complete previous level to unlock</div>':''}${state!=='locked'&&!st.complete?'<div class="lock-note" style="color:var(--muted);">Click any task to submit proof of work</div>':''}</div></div>`;
   }).join('');
 
-  const radarHTML = (d.radar&&d.radar.length>=3)
-    ? `<div class="card" style="margin-bottom:20px;"><span class="eyebrow">Skill profile</span><p style="color:var(--muted);font-size:13px;margin:8px 0 4px;">Your competency map for this goal — the outer edge is mastery; the dents are where to grow.</p><div class="radar-grid"><div class="radar-svg">${renderRadar(d.radar)}</div><div>${radarLegend(d.radar)}</div></div></div>`
-    : '';
   const el = document.getElementById('roadmap-content');
   el.className = opts.animate ? 'rm-animate' : '';
-  el.innerHTML=`${statsHTML}${barHTML}<div class="grid cols-2" style="margin:18px 0 20px;"><div class="card hl"><span class="eyebrow">Readiness</span><div class="readiness" style="margin-top:14px;"><div class="ring" style="--p:${d.readiness}"><span><b data-count="${d.readiness}">${d.readiness}</b><em>%</em></span></div><div><div style="color:var(--muted);font-size:13.5px;line-height:1.6;">${esc(d.summary)}</div><div class="mono" style="margin-top:8px;font-size:11.5px;color:var(--faint);">${completedLevels}/${levels.length} levels · ${totalEarned.toLocaleString()}/${grandTotal.toLocaleString()} XP</div></div></div></div><div class="card"><div class="grid cols-2" style="gap:22px;"><div class="gap-col str"><h4>Strengths</h4>${d.strengths.map(s=>`<div class="gap-item"><span class="ic">▲</span><span>${esc(s)}</span></div>`).join('')}</div><div class="gap-col gap"><h4>Gaps to close</h4>${d.gaps.map(s=>`<div class="gap-item"><span class="ic">●</span><span>${esc(s)}</span></div>`).join('')}</div></div></div></div>${radarHTML}<div class="card"><span class="eyebrow">The level path</span><p style="color:var(--muted);font-size:13px;margin:8px 0 22px;">Submit proof of work for each task — Gemini grades it and adds it to your recruiter profile.</p><div class="level-track">${levelHTML}</div></div>`;
+  el.innerHTML=`${statsHTML}${barHTML}<div class="card" style="margin-top:18px;"><span class="eyebrow">The level path</span><p style="color:var(--muted);font-size:13px;margin:8px 0 22px;">Submit proof of work for each task — Gemini grades it and adds it to your recruiter profile.</p><div class="level-track">${levelHTML}</div></div>`;
 
   // Post-render motion
   if (opts.animate) el.querySelectorAll('[data-count]').forEach(n => countUp(n, +n.dataset.count));
@@ -1579,6 +1690,11 @@ function renderChallenge(c) {
 }
 async function getFeedback() {
   const sol=val('solution-input').trim(); if(!sol){toast('Write your solution first');return;}
+  const challengeIssues = proofQualityIssues(sol, null);
+  if (challengeIssues.length) {
+    document.getElementById('feedback-content').innerHTML=`<div class="alert"><strong>Submission needs more substance.</strong><br>${challengeIssues.map(esc).join('<br>')}</div>`;
+    return;
+  }
   setBusy('feedback-btn',true); document.getElementById('feedback-loading').innerHTML=loadingHTML('Reviewing like a hiring manager…');
   const prompt=`Strict hiring manager review.\n\nCHALLENGE: ${currentChallenge.title}\nSkill: ${currentChallenge.skill} (${currentChallenge.difficulty})\nBrief: ${currentChallenge.brief}\nDeliverables: ${currentChallenge.deliverables.join('; ')}\nGoal: ${store.id.goal} | Level: ${store.id.level}\n\nSUBMISSION: """${sol}"""\n\nScore 0-100, verdict, 2-4 strengths, 2-4 improvements, one next step.`;
   try {
@@ -1692,8 +1808,42 @@ async function endInterview() {
 /* DAILY COACH */
 let selectedMood='';
 function selMood(btn) { document.querySelectorAll('.checkin-opt').forEach(b=>b.classList.remove('sel')); btn.classList.add('sel'); selectedMood=btn.dataset.val; }
+function dayKey(ts=Date.now()) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function streakStats() {
+  const keys = [...new Set(store.checkins.map(c => c.day || dayKey(c.ts)))].sort();
+  const today = dayKey();
+  const yesterday = dayKey(Date.now() - 86400000);
+  const checkedToday = keys.includes(today);
+  let current = 0;
+  if (checkedToday || keys.includes(yesterday)) {
+    const cursor = new Date(checkedToday ? Date.now() : Date.now() - 86400000);
+    while (keys.includes(dayKey(cursor.getTime()))) {
+      current++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+  let longest = 0, run = 0, prev = null;
+  keys.forEach(k => {
+    const cur = new Date(k + 'T00:00:00');
+    if (prev && (cur - prev) === 86400000) run++;
+    else run = 1;
+    longest = Math.max(longest, run);
+    prev = cur;
+  });
+  return { current, longest, checkedToday, totalDays: keys.length };
+}
+function renderStreakSummary() {
+  const el = document.getElementById('streak-summary');
+  if (!el) return;
+  const s = streakStats();
+  el.innerHTML = `<div class="streak-strip"><div class="streak-box"><div class="v">${s.current}</div><div class="l">Current streak</div></div><div class="streak-box"><div class="v">${s.longest}</div><div class="l">Best streak</div></div><div class="streak-box"><div class="v">${s.checkedToday?'Done':'Open'}</div><div class="l">Today</div></div></div>`;
+}
 async function submitCheckin() {
   if(!store.id){toast('Set your identity first');switchTo('identity');return;} if(!selectedMood){toast('Select how you\'re feeling first');return;}
+  if(streakStats().checkedToday){toast('Daily check-in already completed');return;}
   setBusy('checkin-btn',true); document.getElementById('checkin-loading').innerHTML=loadingHTML('Your coach is thinking…'); document.getElementById('checkin-result').innerHTML='';
   const work=val('checkin-work').trim(), block=val('checkin-block').trim();
   const activeLevel=store.roadmap?activeLevelIndex(store.roadmap.levels):-1;
@@ -1702,15 +1852,17 @@ async function submitCheckin() {
   const prompt=`You are an elite career coach doing a daily check-in.\n\nClient: ${store.id.goal} | ${store.id.level}\nCurrent tier: ${levelName}\nCompleted tasks: ${store.progress.length}\nMood: ${selectedMood}\nWorked on: ${work||'Not specified'}\nBlocked by: ${block||'Nothing mentioned'}\n\nGive:\n- "insight": 2-3 sentence honest assessment.\n- "todayPriority": ONE specific most important thing to do today.\n- "encouragement": 1-2 sentences genuine motivation tied to their goal.\n- "roadmapNote": Any adjustment to how they should think about their roadmap.\n- "warningFlag": Direct kind warning if clearly drifting. Empty string if not needed.\n\nBe a real coach, not a cheerleader.`;
   try {
     const c=await callGemini(prompt,checkinSchema);
-    const checkins=store.checkins; checkins.push({ts:Date.now(),mood:selectedMood,work,block,insight:c.insight,todayPriority:c.todayPriority,warningFlag:c.warningFlag}); store.checkins=checkins;
+    const now=Date.now();
+    const checkins=store.checkins; checkins.push({ts:now,day:dayKey(now),mood:selectedMood,work,block,insight:c.insight,todayPriority:c.todayPriority,warningFlag:c.warningFlag}); store.checkins=checkins;
     document.getElementById('checkin-result').innerHTML=`<div class="card hl" style="margin-bottom:20px;"><span class="eyebrow" style="margin-bottom:12px;">Today's coaching</span><div style="color:var(--text);font-size:14.5px;line-height:1.75;margin-bottom:16px;">${esc(c.insight).replace(/\n/g,'<br>')}</div>${c.warningFlag?`<div style="background:var(--amber-soft);border:1px solid rgba(180,83,9,0.25);border-radius:9px;padding:12px 14px;margin-bottom:16px;color:var(--amber);font-size:13.5px;">⚠️ ${esc(c.warningFlag)}</div>`:''}<div style="background:var(--bg-2);border:1px solid var(--border-2);border-radius:10px;padding:16px 18px;margin-bottom:14px;"><div class="mono" style="font-size:10.5px;color:var(--cyan);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Today's priority</div><div style="font-size:15px;font-weight:700;color:var(--text);">${esc(c.todayPriority)}</div></div><div style="color:var(--muted);font-size:13.5px;margin-bottom:12px;line-height:1.65;">${esc(c.encouragement)}</div><div style="font-size:12.5px;color:var(--faint);border-top:1px solid var(--border);padding-top:12px;">${esc(c.roadmapNote)}</div></div>`;
     document.querySelectorAll('.checkin-opt').forEach(b=>b.classList.remove('sel')); selectedMood=''; document.getElementById('checkin-work').value=''; document.getElementById('checkin-block').value='';
-    renderCheckinHistory(); toast('Coaching received · +50 XP ✦'); awardXP(50, 'checkin', {silent:true}); updatePlayerChip();
+    renderCheckinHistory(); renderStreakSummary(); toast(`Streak: ${streakStats().current} day${streakStats().current===1?'':'s'} · +50 XP ✦`); awardXP(50, 'checkin', {silent:true}); updatePlayerChip();
   } catch(e) { document.getElementById('checkin-result').innerHTML=`<div class="alert">${esc(e.message)}</div>`; }
   finally { document.getElementById('checkin-loading').innerHTML=''; setBusy('checkin-btn',false); }
 }
 function renderCheckinHistory() {
   const checkins=store.checkins.slice().reverse(), el=document.getElementById('checkin-history');
+  renderStreakSummary();
   if(!checkins.length){el.innerHTML=`<div class="empty"><div class="big">📋</div>No check-ins yet.</div>`;return;}
   el.innerHTML=checkins.slice(0,10).map(c=>{
     const moodClass=c.mood==='great'?'mood-great':c.mood==='ok'?'mood-ok':'mood-stuck';
