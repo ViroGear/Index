@@ -599,9 +599,9 @@
 
   /* ===== Auth gate ===== */
   body:not(.authed) .app { display: none; }
-  body.authed #auth-screen { display: none; }
-  #auth-screen { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; padding: 24px; overflow: auto;
+  #auth-screen { display: none; position: fixed; inset: 0; z-index: 500; place-items: center; padding: 24px; overflow: auto;
     background: radial-gradient(900px 500px at 80% -10%, rgba(37,99,235,0.08), transparent 60%), var(--bg); }
+  body.gate-auth #auth-screen { display: grid; }
   .auth-card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border);
     border-radius: 18px; padding: 36px 34px; box-shadow: var(--shadow-lg); animation: rise .5s var(--ease-out) both; }
   .auth-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 26px; }
@@ -654,6 +654,30 @@
   .onb-skip:hover { color: var(--accent); }
   @media (max-width: 560px){ .onb-line { width: 14px; } .onb-step .onb-lbl { font-size: 10px; } }
 
+  /* ===== Landing / start page ===== */
+  #landing-screen { display: none; position: fixed; inset: 0; z-index: 470; overflow: auto;
+    background: radial-gradient(1000px 600px at 50% -8%, rgba(37,99,235,0.09), transparent 60%), var(--bg); }
+  body.gate-landing #landing-screen { display: block; }
+  .land-nav { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px; max-width: 1120px; margin: 0 auto; }
+  .land-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+  .land-actions { display: flex; align-items: center; gap: 10px; }
+  .land-hero { max-width: 760px; margin: 0 auto; padding: clamp(36px, 11vh, 110px) 24px 64px; text-align: center; }
+  .land-hero h1 { font-family: 'Inter Tight', sans-serif; font-size: clamp(30px, 5vw, 46px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; }
+  .land-hero h1 .accent { color: var(--accent); }
+  .land-sub { color: var(--muted); font-size: clamp(15px, 2vw, 17px); line-height: 1.6; margin: 16px auto 32px; max-width: 560px; }
+  .land-input-wrap { position: relative; max-width: 640px; margin: 0 auto; }
+  .land-input-wrap textarea { width: 100%; resize: none; background: var(--card); border: 1px solid var(--border-2); border-radius: 18px;
+    padding: 19px 60px 19px 22px; font-size: 16px; font-family: inherit; box-shadow: var(--shadow-md); min-height: 62px; line-height: 1.5; transition: .15s; }
+  .land-input-wrap textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring), var(--shadow-md); }
+  .land-send { position: absolute; right: 12px; bottom: 12px; width: 38px; height: 38px; border-radius: 50%; border: none;
+    background: var(--accent); color: #fff; font-size: 18px; cursor: pointer; display: grid; place-items: center; transition: .15s; box-shadow: var(--shadow-sm); }
+  .land-send:hover { background: var(--accent-dim); transform: translateY(-1px); }
+  .land-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
+  .land-chip { background: var(--card); border: 1px solid var(--border-2); border-radius: 99px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-family: inherit; color: var(--text); transition: .15s; }
+  .land-chip:hover { border-color: var(--accent); color: var(--accent-dim); background: var(--accent-soft); }
+  .land-foot { text-align: center; color: var(--faint); font-size: 12px; margin-top: 40px; }
+  @media (max-width: 560px){ .land-nav { padding: 14px 16px; } }
+
   .main { flex: 1; margin-left: 250px; min-width: 0; }
   .main > .wrap { padding-top: 32px; }
 
@@ -681,10 +705,33 @@
 </head>
 <body>
 
+<!-- START / LANDING PAGE -->
+<div id="landing-screen">
+  <nav class="land-nav">
+    <div class="land-brand"><div class="logo-mark">C</div><span>Career Copilot</span></div>
+    <div class="land-actions">
+      <button class="btn ghost sm" onclick="goLogin()">Log in</button>
+      <button class="btn sm" onclick="goSignup()">Get started</button>
+    </div>
+  </nav>
+  <div class="land-hero">
+    <span class="eyebrow" style="display:inline-flex;margin-bottom:18px;">Your career, gamified</span>
+    <h1>What's your <span class="accent">dream career goal?</span></h1>
+    <p class="land-sub">Tell us where you want to go — Career Copilot builds the roadmap, the skills, and the proof to get you there.</p>
+    <div class="land-input-wrap">
+      <textarea id="land-input" rows="1" placeholder="e.g. Become a software engineer at a top company"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();landingStart();}"></textarea>
+      <button class="land-send" onclick="landingStart()" aria-label="Start">↑</button>
+    </div>
+    <div class="land-chips" id="land-chips"></div>
+    <div class="land-foot">Free to start · Bring your own Gemini key · Your data stays in your browser</div>
+  </div>
+</div>
+
 <!-- AUTH GATE -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-brand">
+    <div class="auth-brand" onclick="setGate('landing')" style="cursor:pointer;" title="Back to home">
       <div class="logo-mark">C</div>
       <div><div class="ab-name">Career Copilot</div><div class="ab-sub mono">Idea → Skills → Proof</div></div>
     </div>
@@ -2052,7 +2099,7 @@ async function submitAuth(){
 function enterApp(email, isNew){
   localStorage.setItem('cc_session', email);
   document.getElementById('user-email').textContent = email;
-  document.body.classList.add('authed');
+  document.body.classList.add('authed'); setGate('app');
   document.getElementById('auth-pass').value = '';
   updatePlayerChip();
   toast(isNew ? 'Welcome to Career Copilot 🎉' : 'Welcome back ✓');
@@ -2063,16 +2110,35 @@ function signOut(){
   document.body.classList.remove('authed');
   document.getElementById('auth-pass').value = '';
   setAuthMode('signin');
+  setGate('landing');
   closeSidebar();
 }
+/* Gate state machine: landing → auth → app */
+function setGate(state){
+  document.body.classList.remove('gate-landing','gate-auth');
+  if(state==='landing') document.body.classList.add('gate-landing');
+  else if(state==='auth') document.body.classList.add('gate-auth');
+}
+let landingGoal = '';
+function renderLandingChips(){
+  const el = document.getElementById('land-chips'); if(!el) return;
+  el.innerHTML = ONB_STEPS[0].chips.map(c=>`<button class="land-chip" onclick="landChip(this.textContent)">${esc(c)}</button>`).join('');
+}
+function landChip(t){ const i = document.getElementById('land-input'); i.value = t; i.focus(); }
+function goLogin(){ setAuthMode('signin'); setGate('auth'); setTimeout(()=>document.getElementById('auth-email').focus(),60); }
+function goSignup(){ setAuthMode('signup'); setGate('auth'); setTimeout(()=>document.getElementById('auth-email').focus(),60); }
+function landingStart(){ landingGoal = document.getElementById('land-input').value.trim(); goSignup(); }
+
 function initAuth(){
+  renderLandingChips();
   const s = localStorage.getItem('cc_session');
   const accs = accountsStore.get();
   setAuthMode('signin');
   if(s && accs[s]){
     document.getElementById('user-email').textContent = s; document.body.classList.add('authed');
+    setGate('app');
     if(!store.id && !localStorage.getItem('cc_onboarded')) startOnboarding();
-  } else { document.body.classList.remove('authed'); }
+  } else { document.body.classList.remove('authed'); setGate('landing'); }
 }
 
 /* ============================================================
@@ -2100,6 +2166,7 @@ const ONB_STEPS = [
 let onb = {}, onbStep = 0;
 function startOnboarding(prefill){
   onb = (prefill && store.id) ? { goal:store.id.goal||'', role:store.id.role||'', skills:store.id.skills||'', timeline:store.id.timeline||'', level:store.id.level||'' } : {};
+  if(!prefill && landingGoal){ onb.goal = landingGoal; landingGoal = ''; }
   onbStep = 0; document.body.classList.add('onboarding'); renderOnboard();
 }
 function skipOnboarding(){ localStorage.setItem('cc_onboarded','1'); document.body.classList.remove('onboarding'); }
